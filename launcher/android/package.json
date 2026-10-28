@@ -6,11 +6,12 @@
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "scripts": {
+    "postinstall": "node scripts/patch-plugins.mjs",
     "fonts": "node ../desktop/scripts/prepare-fonts.mjs public/fonts",
     "build": "npm run fonts && vite build && node scripts/prepare-node.mjs",
-    "add": "npm run build && cap add android && npm run icons && node scripts/patch-android.mjs",
+    "add": "npm run build && cap add android && npm run icons && node scripts/patch-plugins.mjs && node scripts/patch-android.mjs",
     "icons": "capacitor-assets generate --android --assetPath resources --iconBackgroundColor \"#FBE2EC\" --splashBackgroundColor \"#F8C6D8\"",
-    "sync": "npm run build && cap sync android && node scripts/patch-android.mjs",
+    "sync": "npm run build && cap sync android && node scripts/patch-plugins.mjs && node scripts/patch-android.mjs",
     "open": "cap open android",
     "apk": "npm run sync && cd android && ./gradlew assembleDebug",
     "apk:release": "npm run sync && cd android && ./gradlew assembleRelease"

@@ -34,9 +34,17 @@ const alreadyOpened = () => {
 
 // ───────── UI state ─────────
 
-let engine = 'active'; // active | done
+// The first start unpacks ~1300 files from the APK, which takes a while on slow phones.
+const ENGINE_TIMEOUT = 90000;
+// A running engine answers «hello» at once and starts the server within seconds.
+const REPLY_TIMEOUT = 15000;
+const START_TIMEOUT = 60000;
+const RESTART_HINT = 'Закройте приложение полностью (смахните из списка недавних) и откройте снова.';
+
+let engine = 'active'; // active | done | error
 let server = { stage: 'booting' };
 let opening = false;
+let watchdog = null;
 
 function toast(text, ms = 4000) {
   const el = $('toast');
@@ -55,7 +63,8 @@ function setStep(id, state, label) {
 function render() {
   if (server.version) $('version').textContent = `v${server.version}`;
 
-  setStep('step-engine', engine === 'done' ? 'done' : 'active', engine === 'done' ? 'Движок распакован' : 'Распаковываю движок…');
+  if (engine === 'error') setStep('step-engine', 'error', 'Движок не запустился');
+  else setStep('step-engine', engine === 'done' ? 'done' : 'active', engine === 'done' ? 'Движок распакован' : 'Распаковываю движок…');
 
   const ready = server.stage === 'ready';
   if (engine !== 'done') setStep('step-server', 'idle', 'Запуск сервера');
@@ -74,8 +83,10 @@ function render() {
   $('error').hidden = !server.error;
   $('error').textContent = server.error ? `Ошибка: ${server.error}` : '';
 
-  $('btn-open').disabled = !ready && server.stage !== 'error';
-  $('open-text').textContent = server.stage === 'error' ? 'Попробовать снова' : 'Открыть';
+  // Without a live engine «Попробовать снова» can't help: only an app restart can.
+  const retry = server.stage === 'error' && !server.fatal;
+  $('btn-open').disabled = !ready && !retry;
+  $('open-text').textContent = retry ? 'Попробовать снова' : 'Открыть';
 }
 
 function openInterface() {
@@ -93,13 +104,31 @@ function openInterface() {
 
 // ───────── Server lifecycle ─────────
 
+function fail(message, fatal = false) {
+  clearTimeout(watchdog);
+  server = { ...server, stage: 'error', error: message, fatal };
+  render();
+}
+
+/** Fails with `message` unless a status arrives within `ms`. */
+function expectStatus(ms, message) {
+  clearTimeout(watchdog);
+  watchdog = setTimeout(() => fail(message, true), ms);
+}
+
+function startServer() {
+  server = { ...server, stage: 'starting', error: '' };
+  render();
+  expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
+  sendToNode('start', { port: 8000 }).catch((err) => fail(err.message || String(err)));
+}
+
 function onStatus(s) {
+  clearTimeout(watchdog);
   const was = server.stage;
   server = s;
-  if (s.stage === 'idle') {
-    sendToNode('start', { port: 8000 });
-    server = { ...s, stage: 'starting' };
-  }
+  if (s.stage === 'idle') startServer();
+  else if (s.stage === 'starting') expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
   render();
   if (server.stage === 'ready' && was !== 'ready') {
     if (prefs.background) applyBackground(true);
@@ -110,21 +139,29 @@ function onStatus(s) {
 async function boot() {
   render();
   onNode('status', onStatus);
-  await engineReady();
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), ENGINE_TIMEOUT);
+  });
+  try {
+    await Promise.race([engineReady(), timeout]);
+  } catch {
+    engine = 'error';
+    return fail(`Node.js не запустился за полторы минуты. Возможно, не хватило места в памяти телефона. ${RESTART_HINT}`, true);
+  } finally {
+    clearTimeout(timer);
+  }
   engine = 'done';
   render();
-  sendToNode('hello');
+  // Silence after «hello» means the Node.js script itself failed to load.
+  expectStatus(REPLY_TIMEOUT, `Node.js запущен, но не отвечает. ${RESTART_HINT}`);
+  sendToNode('hello').catch((err) => fail(err.message || String(err), true));
 }
 
 // ───────── Controls ─────────
 
 $('btn-open').addEventListener('click', () => {
-  if (server.stage === 'error') {
-    server = { ...server, stage: 'starting', error: '' };
-    render();
-    sendToNode('start', { port: 8000 });
-    return;
-  }
+  if (server.stage === 'error') return startServer();
   openInterface();
 });
 
@@ -202,7 +239,8 @@ $('btn-updates').addEventListener('click', () => {
 $('btn-backup').addEventListener('click', async () => {
   if (server.stage !== 'ready') return toast('Сначала дождитесь запуска сервера');
   toast('Собираю бэкап…', 30000);
-  const res = await askNode('backup', 'backup');
+  // Big galleries take a while to zip.
+  const res = await askNode('backup', 'backup', undefined, 5 * 60000).catch((err) => ({ ok: false, error: err.message }));
   if (!res?.ok) return toast(`Бэкап не получился: ${res?.error || 'неизвестная ошибка'}`, 6000);
   try {
     const where = exportFile(res.path, `cream-soda-${res.name}`, 'application/zip');
@@ -214,7 +252,7 @@ $('btn-backup').addEventListener('click', async () => {
 
 async function showLogs() {
   const pre = $('logs-text');
-  pre.textContent = (await askNode('logs', 'logs')) || 'Пусто';
+  pre.textContent = (await askNode('logs', 'logs').catch((err) => `Логи недоступны: ${err.message}`)) || 'Пусто';
   pre.scrollTop = pre.scrollHeight;
 }
 $('btn-logs').addEventListener('click', () => {
@@ -224,7 +262,4 @@ $('btn-logs').addEventListener('click', () => {
 $('btn-logs-refresh').addEventListener('click', showLogs);
 $('btn-logs-close').addEventListener('click', () => ($('logs').hidden = true));
 
-boot().catch((err) => {
-  server = { ...server, stage: 'error', error: err.message || String(err) };
-  render();
-});
+boot().catch((err) => fail(err.message || String(err), true));

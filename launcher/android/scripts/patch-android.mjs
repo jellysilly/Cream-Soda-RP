@@ -42,6 +42,11 @@ for (const p of PERMISSIONS) {
   }
 }
 
+// Don't recreate the activity (and reload the interface) when the system font size changes.
+manifest = manifest.replace(/android:configChanges="([^"]*)"/, (m, list) =>
+  list.includes('fontScale') ? m : `android:configChanges="${list}|fontScale|fontWeightAdjustment"`,
+);
+
 if (!manifest.includes('android:usesCleartextTraffic')) {
   manifest = manifest.replace('<application', '<application\n        android:usesCleartextTraffic="true"');
 }

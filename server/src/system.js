@@ -6,7 +6,14 @@ import QRCode from 'qrcode';
 
 export function lanAddresses() {
   const out = [];
-  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+  let interfaces = {};
+  try {
+    interfaces = os.networkInterfaces();
+  } catch {
+    // Android 11+ denies apps the interface list (uv_interface_addresses: EACCES).
+    return out;
+  }
+  for (const [name, list] of Object.entries(interfaces)) {
     for (const a of list || []) {
       if (a.family !== 'IPv4' || a.internal) continue;
       if (/^(docker|br-|veth|vmnet|vboxnet|utun|tun)/i.test(name)) continue;

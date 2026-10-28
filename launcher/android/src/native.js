@@ -19,17 +19,28 @@ export function onNode(eventName, fn) {
   return NodeJS.addListener(eventName, (event) => fn(event.args[0]));
 }
 
-/** Sends a message and resolves with the first reply of the given event. */
-export function askNode(eventName, replyEvent, arg) {
-  return new Promise((resolve) => {
+/** Sends a message and resolves with the first reply of the given event (rejects after `timeoutMs`). */
+export function askNode(eventName, replyEvent, arg, timeoutMs = 30000) {
+  return new Promise((resolve, reject) => {
     let handle;
+    const done = () => {
+      clearTimeout(timer);
+      handle?.remove();
+    };
+    const timer = setTimeout(() => {
+      done();
+      reject(new Error('Node.js не ответил'));
+    }, timeoutMs);
     Promise.resolve(
       NodeJS.addListener(replyEvent, (event) => {
-        handle?.remove();
+        done();
         resolve(event.args[0]);
       }),
     ).then((h) => (handle = h));
-    sendToNode(eventName, arg);
+    sendToNode(eventName, arg).catch((err) => {
+      done();
+      reject(err);
+    });
   });
 }
 

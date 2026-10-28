@@ -97,7 +97,31 @@ export async function scanQr() {
   }
 }
 
-// ───────── Files ─────────
+// ───────── Files and logs ─────────
+
+const LOG_TAGS = /^\S+ \S+ [VDIWEF]\/(NodeJS-Engine|CreamSoda\/Node|Capacitor[^(]*|AndroidRuntime|System\.err|DEBUG|libc|linker)\s*\(/;
+
+/** This app's Android log (Node.js output, plugin and crash messages), or '' outside the app. */
+export function readSystemLog(maxLines = 400) {
+  const bridge = window.CreamSodaAndroid;
+  if (!bridge?.readLogs) return '';
+  const raw = String(bridge.readLogs());
+  if (raw.startsWith('error:')) return `Не удалось прочитать журнал Android: ${raw.slice(6)}`;
+  const lines = raw.split('\n').filter((line) => LOG_TAGS.test(line));
+  return lines.slice(-maxLines).join('\n');
+}
+
+/** Saves text into Downloads/Cream Soda (MainActivity bridge) and returns where it went. */
+export function saveText(name, text) {
+  const bridge = window.CreamSodaAndroid;
+  if (!bridge?.saveBase64) throw new Error('Сохранение файлов недоступно в этой сборке');
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const res = String(bridge.saveBase64(btoa(binary), name, 'text/plain'));
+  if (res.startsWith('error:')) throw new Error(res.slice(6));
+  return res;
+}
 
 /** Copies a file from the app's private data into Downloads/Cream Soda (MainActivity bridge). */
 export function exportFile(path, name, mime) {

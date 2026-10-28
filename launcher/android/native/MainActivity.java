@@ -11,17 +11,20 @@ import android.webkit.JavascriptInterface;
 import android.widget.Toast;
 import com.getcapacitor.BridgeActivity;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Cream Soda activity. Android's WebView ignores <a download>, so the interface saves
  * exported files (cards, chats, backups) through window.CreamSodaAndroid instead;
- * they land in Downloads/Cream Soda.
+ * they land in Downloads/Cream Soda. The same object lets the launcher read this
+ * app's own Android log, which is where Node.js prints its errors.
  *
  * Copied over the generated MainActivity by scripts/patch-android.mjs.
  */
@@ -42,6 +45,26 @@ public class MainActivity extends BridgeActivity {
                 return save(name, mime, new ByteArrayInputStream(Base64.decode(data, Base64.DEFAULT)));
             } catch (Exception e) {
                 return fail(e);
+            }
+        }
+
+        /** Last lines of this app's own Android log (no permission needed for own process). */
+        @JavascriptInterface
+        public String readLogs() {
+            try {
+                Process logcat = new ProcessBuilder(
+                    "logcat", "-d", "-v", "time", "-t", "3000", "--pid", String.valueOf(android.os.Process.myPid())
+                )
+                    .redirectErrorStream(true)
+                    .start();
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                try (InputStream in = logcat.getInputStream()) {
+                    copy(in, out);
+                }
+                logcat.waitFor();
+                return new String(out.toByteArray(), StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                return "error:" + e.getMessage();
             }
         }
 

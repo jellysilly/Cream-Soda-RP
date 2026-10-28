@@ -1,4 +1,4 @@
-import { engineReady, sendToNode, onNode, askNode, setBackground, setKeepAwake, scanQr, exportFile } from './native.js';
+import { engineReady, sendToNode, onNode, askNode, setBackground, setKeepAwake, scanQr, exportFile, readSystemLog, saveText } from './native.js';
 
 const RELEASES_URL = 'https://github.com/jellysilly/Cream-Soda-RP/releases';
 const $ = (id) => document.getElementById(id);
@@ -39,12 +39,13 @@ const ENGINE_TIMEOUT = 90000;
 // A running engine answers «hello» at once and starts the server within seconds.
 const REPLY_TIMEOUT = 15000;
 const START_TIMEOUT = 60000;
-const RESTART_HINT = 'Закройте приложение полностью (смахните из списка недавних) и откройте снова.';
+const RESTART_HINT = 'Закройте приложение полностью (смахните из списка недавних) и откройте снова. Подробности — в «Логи» внизу экрана.';
 
 let engine = 'active'; // active | done | error
 let server = { stage: 'booting' };
 let opening = false;
 let watchdog = null;
+let helloTimer = null;
 
 function toast(text, ms = 4000) {
   const el = $('toast');
@@ -125,6 +126,7 @@ function startServer() {
 
 function onStatus(s) {
   clearTimeout(watchdog);
+  clearInterval(helloTimer);
   const was = server.stage;
   server = s;
   if (s.stage === 'idle') startServer();
@@ -154,8 +156,12 @@ async function boot() {
   engine = 'done';
   render();
   // Silence after «hello» means the Node.js script itself failed to load.
+  // Ask a few times in case one message got lost on the way.
   expectStatus(REPLY_TIMEOUT, `Node.js запущен, но не отвечает. ${RESTART_HINT}`);
-  sendToNode('hello').catch((err) => fail(err.message || String(err), true));
+  const hello = () => sendToNode('hello').catch((err) => fail(err.message || String(err), true));
+  hello();
+  helloTimer = setInterval(hello, 3000);
+  setTimeout(() => clearInterval(helloTimer), REPLY_TIMEOUT);
 }
 
 // ───────── Controls ─────────
@@ -250,9 +256,22 @@ $('btn-backup').addEventListener('click', async () => {
   }
 });
 
+/** Server log (when Node.js answers) plus the app's Android log, which works even when it doesn't. */
+async function collectLogs() {
+  const parts = [];
+  if (engine === 'done') {
+    const serverLog = await askNode('logs', 'logs', undefined, 3000).catch(() => '');
+    if (serverLog) parts.push(`── Сервер ──\n${serverLog}`);
+  }
+  const system = readSystemLog();
+  if (system) parts.push(`── Android ──\n${system}`);
+  return parts.join('\n\n') || 'Пусто';
+}
+
 async function showLogs() {
   const pre = $('logs-text');
-  pre.textContent = (await askNode('logs', 'logs').catch((err) => `Логи недоступны: ${err.message}`)) || 'Пусто';
+  pre.textContent = 'Собираю…';
+  pre.textContent = await collectLogs();
   pre.scrollTop = pre.scrollHeight;
 }
 $('btn-logs').addEventListener('click', () => {
@@ -260,6 +279,15 @@ $('btn-logs').addEventListener('click', () => {
   showLogs();
 });
 $('btn-logs-refresh').addEventListener('click', showLogs);
+$('btn-logs-save').addEventListener('click', () => {
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  try {
+    const where = saveText(`cream-soda-log-${stamp}.txt`, $('logs-text').textContent);
+    toast(`Лог сохранён:\n${where}`, 6000);
+  } catch (err) {
+    toast(err.message || String(err), 6000);
+  }
+});
 $('btn-logs-close').addEventListener('click', () => ($('logs').hidden = true));
 
 boot().catch((err) => fail(err.message || String(err), true));

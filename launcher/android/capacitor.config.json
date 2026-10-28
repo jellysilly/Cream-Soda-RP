@@ -6,7 +6,14 @@
   "server": {
     "androidScheme": "https",
     "cleartext": true,
-    "allowNavigation": ["127.0.0.1", "localhost", "192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"]
+    "allowNavigation": [
+      "127.0.0.1",
+      "localhost",
+      "192.168.*.*",
+      "10.*.*.*",
+      "172.*.*.*",
+      "*.local"
+    ]
   },
   "android": {
     "allowMixedContent": false
@@ -16,5 +23,6 @@
       "nodeDir": "nodejs",
       "startMode": "auto"
     }
-  }
+  },
+  "loggingBehavior": "production"
 }

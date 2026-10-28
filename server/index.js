@@ -98,6 +98,7 @@ export async function startServer(options = {}) {
       clearInterval(backupTimer);
       for (const sock of sockets) sock.destroy();
       await new Promise((r) => server.close(() => r()));
+      logs.close();
     },
   };
 }

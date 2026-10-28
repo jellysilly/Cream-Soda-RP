@@ -96,8 +96,32 @@ export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+interface AndroidFiles {
+  saveBase64(data: string, name: string, mime: string): string;
+}
+
+/** Present inside the Android app, whose WebView ignores <a download>. */
+function androidFiles(): AndroidFiles | undefined {
+  return (window as unknown as { CreamSodaAndroid?: AndroidFiles }).CreamSodaAndroid;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).replace(/^data:[^,]*,/, ''));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 export function download(name: string, data: BlobPart | Blob, type = 'application/octet-stream') {
   const blob = data instanceof Blob ? data : new Blob([data], { type });
+  const android = androidFiles();
+  if (android) {
+    // The app shows its own toast with where the file went (or why it failed).
+    blobToBase64(blob).then((b64) => android.saveBase64(b64, name, blob.type || type));
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

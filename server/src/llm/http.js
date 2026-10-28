@@ -1,7 +1,29 @@
-import { fetch, ProxyAgent } from 'undici';
-import { socksDispatcher } from 'fetch-socks';
+import { fetch, Agent, ProxyAgent, buildConnector } from 'undici';
+import { SocksClient } from 'socks';
 
 const dispatchers = new Map();
+
+/** undici Agent whose connections go through a SOCKS4/5 proxy (TLS is set up on top). */
+function socksAgent(proxy) {
+  const tlsConnect = buildConnector({});
+  return new Agent({
+    connect: async (options, callback) => {
+      const { protocol, hostname, port } = options;
+      try {
+        const { socket } = await SocksClient.createConnection({
+          command: 'connect',
+          proxy,
+          timeout: 15000,
+          destination: { host: hostname, port: port ? Number(port) : protocol === 'http:' ? 80 : 443 },
+        });
+        if (protocol !== 'https:') return callback(null, socket.setNoDelay());
+        tlsConnect({ ...options, httpSocket: socket }, callback);
+      } catch (err) {
+        callback(err, null);
+      }
+    },
+  });
+}
 
 function dispatcherFor(proxy) {
   const url = String(proxy || '').trim();
@@ -10,7 +32,7 @@ function dispatcherFor(proxy) {
   let dispatcher;
   const parsed = new URL(url);
   if (parsed.protocol.startsWith('socks')) {
-    dispatcher = socksDispatcher({
+    dispatcher = socksAgent({
       type: parsed.protocol === 'socks4:' ? 4 : 5,
       host: parsed.hostname,
       port: Number(parsed.port) || 1080,

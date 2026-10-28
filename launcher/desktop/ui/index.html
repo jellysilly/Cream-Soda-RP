@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; script-src 'self'" />
+    <title>Cream Soda · лаунчер</title>
+    <link rel="stylesheet" href="./fonts/fonts.css" />
+    <link rel="stylesheet" href="./launcher.css" />
+  </head>
+  <body>
+    <div class="window">
+      <svg class="grain" aria-hidden="true">
+        <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" /><feColorMatrix type="saturate" values="0" /></filter>
+        <rect width="100%" height="100%" filter="url(#grain)" />
+      </svg>
+      <div class="orb orb--pink" style="left: 330px; top: 70px; width: 90px; height: 90px"></div>
+      <div class="orb orb--pink" style="left: 388px; top: 40px; width: 70px; height: 70px"></div>
+      <div class="orb orb--blue" style="left: 30px; top: 118px; width: 70px; height: 70px"></div>
+      <div class="blob" style="left: -80px; top: 340px"></div>
+
+      <div class="titlebar">
+        <span class="titlebar__title">Cream Soda · лаунчер</span>
+        <button type="button" class="round-btn" id="btn-min" aria-label="Свернуть">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12" /></svg>
+        </button>
+        <button type="button" class="round-btn" id="btn-close" aria-label="Закрыть">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17" /></svg>
+        </button>
+      </div>
+
+      <div class="content">
+        <div class="hero">
+          <div class="hero__kana" aria-hidden="true">クリーム<br />ソーダ</div>
+          <div class="hero__script" aria-hidden="true"><span>cream</span><span>roleplay</span><span>soda</span></div>
+          <h1>Cream Soda</h1>
+          <p class="hero__text">Всё нужное уже внутри: движок, сервер и интерфейс. Нажми «Запустить».</p>
+          <svg class="glass" viewBox="0 0 200 290" width="190" height="276" role="img" aria-label="Бокал крем-соды">
+            <defs>
+              <linearGradient id="soda" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DDF2FD" /><stop offset="1" stop-color="#86C6EC" /></linearGradient>
+              <radialGradient id="scoop" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#FFFFFF" /><stop offset="0.6" stop-color="#FFF6E3" /><stop offset="1" stop-color="#F8E2C2" /></radialGradient>
+            </defs>
+            <rect x="116" y="8" width="9" height="120" rx="4.5" fill="#FFDCE9" stroke="#F58BB5" stroke-width="2" transform="rotate(14 120 68)" />
+            <path d="M36 98h128c0 64-20 104-64 108-44-4-64-44-64-108z" fill="url(#soda)" opacity="0.95" />
+            <circle cx="100" cy="88" r="42" fill="url(#scoop)" />
+            <path d="M110 46c4-14 12-22 24-26" stroke="#2EA77F" stroke-width="3" fill="none" stroke-linecap="round" />
+            <circle cx="108" cy="50" r="12" fill="#E5243F" />
+            <circle cx="104" cy="46" r="3.5" fill="#FFFFFF" opacity="0.8" />
+            <circle class="fizz" cx="74" cy="140" r="5" fill="#FFFFFF" opacity="0.7" />
+            <circle class="fizz fizz--2" cx="122" cy="160" r="4" fill="#FFFFFF" opacity="0.6" />
+            <circle class="fizz fizz--3" cx="96" cy="178" r="3" fill="#FFFFFF" opacity="0.7" />
+            <rect x="94" y="204" width="12" height="52" rx="4" fill="#BFE3F7" />
+            <ellipse cx="100" cy="262" rx="48" ry="11" fill="#BFE3F7" />
+          </svg>
+        </div>
+
+        <div class="panel">
+          <div class="row">
+            <span class="status" id="status"><span class="dot"></span><span id="status-text">Готово к запуску</span></span>
+            <span class="version" id="version">v…</span>
+          </div>
+
+          <button type="button" class="launch" id="btn-launch">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5z" /></svg>
+            <span id="launch-text">Запустить</span>
+          </button>
+
+          <div class="segmented" role="radiogroup" aria-label="Где открыть">
+            <button type="button" role="radio" data-mode="window" aria-checked="true">В окне приложения</button>
+            <button type="button" role="radio" data-mode="browser" aria-checked="false">В браузере</button>
+          </div>
+
+          <div class="phone">
+            <div class="qr" id="qr" aria-label="QR-код для телефона"></div>
+            <div class="phone__info">
+              <label class="check">
+                <span>Открыть с телефона</span>
+                <input type="checkbox" id="lan" />
+              </label>
+              <span class="mono" id="lan-addr">—</span>
+              <span class="hint" id="lan-hint">Отсканируй QR-код в той же Wi-Fi сети</span>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>Профиль</span>
+            <select id="profile"></select>
+          </label>
+
+          <p class="hint error" id="error" hidden></p>
+
+          <div class="bottom">
+            <button type="button" class="soft-btn" id="btn-update">Обновить</button>
+            <button type="button" class="soft-btn" id="btn-backup">Бэкап</button>
+            <button type="button" class="soft-btn" id="btn-logs">Логи</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="logs" hidden>
+        <div class="overlay__card">
+          <div class="row">
+            <strong>Логи сервера</strong>
+            <button type="button" class="soft-btn soft-btn--sm" id="btn-logs-refresh">Обновить</button>
+            <button type="button" class="soft-btn soft-btn--sm" id="btn-data">Папка данных</button>
+            <button type="button" class="round-btn" id="btn-logs-close" aria-label="Закрыть">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17" /></svg>
+            </button>
+          </div>
+          <pre id="logs-text"></pre>
+        </div>
+      </div>
+      <div class="toast" id="toast" hidden></div>
+    </div>
+    <script src="./launcher.js"></script>
+  </body>
+</html>

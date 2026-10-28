@@ -46,6 +46,9 @@ export async function qrSvg(text) {
   });
 }
 
+let consoleHooked = false;
+let activeCapture = null;
+
 /** Captures console output into a ring buffer + log file (for «Логи» in the launcher). */
 export class LogCapture {
   constructor(logsDir, limit = 800) {
@@ -63,16 +66,28 @@ export class LogCapture {
     this.stream = fs.createWriteStream(this.file, { flags: 'a' });
   }
 
+  /**
+   * Mirrors console output into this capture. The console is patched once per
+   * process; a restarted server (e.g. after a profile switch) just takes over.
+   */
   hookConsole() {
-    if (this.hooked) return;
-    this.hooked = true;
-    for (const level of ['log', 'info', 'warn', 'error']) {
-      const original = console[level].bind(console);
-      console[level] = (...args) => {
-        original(...args);
-        this.push(level, args.map((a) => (a instanceof Error ? a.stack || a.message : typeof a === 'string' ? a : safeJson(a))).join(' '));
-      };
+    if (!consoleHooked) {
+      consoleHooked = true;
+      for (const level of ['log', 'info', 'warn', 'error']) {
+        const original = console[level].bind(console);
+        console[level] = (...args) => {
+          original(...args);
+          activeCapture?.push(level, args.map((a) => (a instanceof Error ? a.stack || a.message : typeof a === 'string' ? a : safeJson(a))).join(' '));
+        };
+      }
     }
+    activeCapture = this;
+  }
+
+  close() {
+    if (activeCapture === this) activeCapture = null;
+    this.listeners.clear();
+    this.stream.end();
   }
 
   push(level, text) {

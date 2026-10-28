@@ -1,0 +1,25 @@
+{
+  "name": "cream-soda-launcher",
+  "productName": "Cream Soda",
+  "version": "1.4.2",
+  "description": "Лаунчер Cream Soda: движок, сервер и интерфейс в одном окне",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "author": "Cream Soda",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "prestart": "node scripts/prepare-fonts.mjs",
+    "start": "electron .",
+    "stage": "node scripts/prepare-fonts.mjs && node scripts/stage.mjs",
+    "dist": "npm run stage && electron-builder --projectDir stage",
+    "dist:win": "npm run stage && electron-builder --projectDir stage --win",
+    "dist:mac": "npm run stage && electron-builder --projectDir stage --mac",
+    "dist:linux": "npm run stage && electron-builder --projectDir stage --linux",
+    "pack": "npm run stage && electron-builder --projectDir stage --dir"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  }
+}

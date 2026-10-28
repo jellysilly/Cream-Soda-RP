@@ -24,6 +24,12 @@ function isIpLiteral(host) {
 
 const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+/** Content-Disposition for a download whose name may be non-ASCII (RFC 6266). */
+function attachment(name) {
+  const ascii = name.replace(/[^\x20-\x7e]|["\\]/g, '_');
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
 export function createApp(ctx) {
   const { paths, state } = ctx;
   const storage = new Storage(paths);
@@ -332,7 +338,7 @@ export function createApp(ctx) {
       const buf = await createBackup(paths, secrets, { includeKeys });
       const stamp = new Date().toISOString().slice(0, 10);
       res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', `attachment; filename="cream-soda-${paths.profile}-${stamp}.zip"`);
+      res.setHeader('Content-Disposition', attachment(`cream-soda-${paths.profile}-${stamp}.zip`));
       res.send(buf);
     }),
   );

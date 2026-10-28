@@ -1,0 +1,32 @@
+{
+  "name": "cream-soda-android",
+  "version": "1.4.2",
+  "description": "Лаунчер Cream Soda для Android: сервер на телефоне (Capacitor + Node.js for Mobile Apps)",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "fonts": "node ../desktop/scripts/prepare-fonts.mjs public/fonts",
+    "build": "npm run fonts && vite build && node scripts/prepare-node.mjs",
+    "add": "npm run build && cap add android && npm run icons && node scripts/patch-android.mjs",
+    "icons": "capacitor-assets generate --android --assetPath resources --iconBackgroundColor \"#FBE2EC\" --splashBackgroundColor \"#F8C6D8\"",
+    "sync": "npm run build && cap sync android && node scripts/patch-android.mjs",
+    "open": "cap open android",
+    "apk": "npm run sync && cd android && ./gradlew assembleDebug",
+    "apk:release": "npm run sync && cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.1",
+    "@capacitor-mlkit/barcode-scanning": "^8.2.1",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capawesome-team/capacitor-android-foreground-service": "^8.1.0",
+    "capacitor-nodejs": "https://github.com/hampoelz/capacitor-nodejs/releases/download/v1.0.0-beta.10/capacitor-nodejs.tgz"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0",
+    "vite": "^6.0.7"
+  }
+}

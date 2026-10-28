@@ -9,3 +9,7 @@ data/
 *.log
 .DS_Store
 *.tsbuildinfo
+launcher/desktop/stage/
+launcher/desktop/ui/fonts/
+launcher/android/www/
+launcher/android/public/fonts/

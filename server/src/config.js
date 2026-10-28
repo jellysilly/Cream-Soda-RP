@@ -10,11 +10,21 @@ export const WEB_DIST = path.join(ROOT_DIR, 'web', 'dist');
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
 export const VERSION = pkg.version;
 
+// Unicode property escapes need ICU, which nodejs-mobile (Android) is built without;
+// there we fall back to stripping characters that are unsafe in file names.
+const UNSAFE_NAME_CHARS = (() => {
+  try {
+    return new RegExp('[^\\p{L}\\p{N}_\\- ]+', 'gu');
+  } catch {
+    return /[\x00-\x1f<>:"/\\|?*.%]+/g;
+  }
+})();
+
 /** Profile names become directory names, so keep them filesystem-safe. */
 export function sanitizeProfileName(name) {
   const clean = String(name || '')
     .trim()
-    .replace(/[^\p{L}\p{N}_\- ]+/gu, '')
+    .replace(UNSAFE_NAME_CHARS, '')
     .slice(0, 48);
   return clean || 'default';
 }

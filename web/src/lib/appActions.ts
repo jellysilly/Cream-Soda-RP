@@ -388,7 +388,21 @@ export function memoryToLorebook(chat: Chat) {
 
 // ───────── Full backup ─────────
 
-export function downloadBackup(includeKeys: boolean) {
+export async function downloadBackup(includeKeys: boolean) {
+  if ('CreamSodaAndroid' in window) {
+    // Android WebView can't download links itself: fetch the zip and hand it over.
+    try {
+      const res = await fetch(api.backupUrl(includeKeys));
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const disposition = res.headers.get('content-disposition') || '';
+      const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
+      const name = (utf8 && decodeURIComponent(utf8)) || /filename="?([^";]+)/.exec(disposition)?.[1] || 'cream-soda-backup.zip';
+      download(name, await res.blob(), 'application/zip');
+    } catch (err) {
+      toastError(err);
+    }
+    return;
+  }
   const a = document.createElement('a');
   a.href = api.backupUrl(includeKeys);
   a.download = '';

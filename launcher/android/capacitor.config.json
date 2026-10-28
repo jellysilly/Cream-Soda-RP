@@ -1,0 +1,20 @@
+{
+  "appId": "rp.creamsoda.app",
+  "appName": "Cream Soda",
+  "webDir": "www",
+  "backgroundColor": "#F8C6D8",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": ["127.0.0.1", "localhost", "192.168.*.*", "10.*.*.*", "172.*.*.*", "*.local"]
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "CapacitorNodeJS": {
+      "nodeDir": "nodejs",
+      "startMode": "auto"
+    }
+  }
+}

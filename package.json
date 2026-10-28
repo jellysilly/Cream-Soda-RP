@@ -1,0 +1,34 @@
+{
+  "name": "cream-soda-rp",
+  "version": "1.4.2",
+  "description": "Cream Soda — фронтенд для ролевых чатов с ИИ в духе SillyTavern: движок, сервер и интерфейс в одном пакете.",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "main": "server/index.js",
+  "bin": {
+    "cream-soda": "server/cli.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "postinstall": "npm --prefix web install --no-audit --no-fund",
+    "dev": "node scripts/dev.js",
+    "dev:server": "node server/cli.js --port 8000 --dev",
+    "dev:web": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "start": "node server/cli.js",
+    "check": "npm --prefix web run typecheck && node --test server/test",
+    "test": "node --test server/test",
+    "mock-llm": "node scripts/mock-llm.js",
+    "launcher": "npm --prefix launcher/desktop start"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "fetch-socks": "^1.3.2",
+    "fflate": "^0.8.2",
+    "qrcode": "^1.5.4",
+    "undici": "^6.21.0"
+  }
+}

@@ -1,0 +1,154 @@
+/*
+ * Cream Soda design tokens.
+ * Every colour the interface uses comes from a --cs-* variable so that themes
+ * (and the user's own CSS) can restyle the whole app from one place.
+ * Values below are the "Cream Soda · день" theme; other themes override them
+ * at runtime through ThemeTokens (see lib/theme.ts).
+ */
+:root {
+  --cs-font-heading: 'M PLUS Rounded 1c', system-ui, sans-serif;
+  --cs-font-body: 'Nunito', system-ui, sans-serif;
+  --cs-font-serif: 'Playfair Display', Georgia, serif;
+  --cs-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --cs-bg: linear-gradient(180deg, #F5AEC8 0%, #F8C6D8 40%, #FBE2EC 72%, #D3EBF8 100%);
+  --cs-bg-solid: #FBE2EC;
+  --cs-text: #47162F;
+  --cs-muted: #85395E;
+  --cs-faint: #C98BA8;
+  --cs-link: #A3134F;
+  --cs-link-hover: #6E0C35;
+  --cs-accent: #D6216A;
+  --cs-accent-text: #FFFFFF;
+  --cs-accent-shadow: rgba(214, 33, 106, 0.35);
+
+  --cs-surface: rgba(255, 255, 255, 0.62);
+  --cs-surface-strong: rgba(255, 255, 255, 0.78);
+  --cs-surface-soft: rgba(255, 255, 255, 0.5);
+  --cs-surface-row: #FFFFFF;
+  --cs-surface-row-soft: rgba(255, 255, 255, 0.55);
+  --cs-border: rgba(255, 255, 255, 0.9);
+  --cs-shadow: 0 10px 30px rgba(199, 70, 120, 0.12);
+  --cs-shadow-soft: 0 6px 18px rgba(199, 70, 120, 0.1);
+  --cs-shadow-row: 0 3px 10px rgba(199, 70, 120, 0.06);
+
+  --cs-field: #FFFFFF;
+  --cs-field-border: #F8C6D8;
+  --cs-field-text: #47162F;
+  --cs-chip: #FCE4EE;
+  --cs-chip-text: #47162F;
+  --cs-tab-active: #FFFFFF;
+  --cs-tab-shadow: 0 2px 6px rgba(199, 70, 120, 0.15);
+  --cs-dashed: #E58BB0;
+  --cs-divider: #F2A3C2;
+
+  --cs-bubble-char: #FFFFFF;
+  --cs-bubble-char-border: transparent;
+  --cs-bubble-user: #FFDCE9;
+  --cs-bubble-user-border: transparent;
+  --cs-bubble-system: rgba(255, 255, 255, 0.55);
+  --cs-em: #85395E;
+  --cs-em-user: #85395E;
+  --cs-quote: inherit;
+
+  --cs-card: #FFF6E3;
+  --cs-card-text: #47162F;
+  --cs-card-label: #7A3E17;
+  --cs-card-border: #F3DDB0;
+  --cs-card-band: #FFFFFF;
+  --cs-card-band-check: rgba(240, 128, 170, 0.45);
+
+  --cs-mint: #2ED8A6;
+  --cs-mint-text: #0E3B2E;
+  --cs-mint-soft: #D9F7EC;
+  --cs-mint-deep: #0B5C46;
+  --cs-mint-ink: #0B7D5F;
+  --cs-rose-soft: #FFDCE9;
+  --cs-rose-deep: #8C1446;
+  --cs-honey-soft: #FFF0D6;
+  --cs-honey-deep: #7A3E17;
+  --cs-sky-soft: #DCEFFB;
+  --cs-sky-deep: #1F4E70;
+  --cs-lilac-soft: #F0E6FB;
+  --cs-lilac-deep: #4E2A7A;
+  --cs-lilac: #6B3FA8;
+  --cs-amber: #E8B66C;
+  --cs-danger: #D6216A;
+
+  --cs-switch-off: #E9C4D4;
+  --cs-code-bg: #3A1228;
+  --cs-code-text: #FCE4EE;
+  --cs-code-muted: #C9A3BC;
+  --cs-mark-bg: #D9F7EC;
+  --cs-mark-text: #0B5C46;
+
+  --cs-orb-pink: radial-gradient(circle at 35% 30%, #FFE3EE, #FF9DC5 60%, #F57FB0);
+  --cs-orb-blue: radial-gradient(circle at 35% 30%, #F2FBFF, #A9DBF7 60%, #86C6EC);
+  --cs-orb-glow-pink: none;
+  --cs-orb-glow-blue: none;
+  --cs-blob: #FFFFFF;
+  --cs-blob-opacity: 0.72;
+
+  --cs-radius: 28px;
+  --cs-blur: 14px;
+  --cs-grain: 0.16;
+  --cs-grain-blend: multiply;
+  --cs-glow: none;
+  --cs-glow-strength: 0;
+
+  --cs-r-xl: calc(var(--cs-radius) + 4px);
+  --cs-r-lg: calc(var(--cs-radius) + 2px);
+  --cs-r-md: var(--cs-radius);
+  --cs-r-sm: calc(var(--cs-radius) * 0.72);
+  --cs-r-xs: calc(var(--cs-radius) * 0.5);
+
+  color-scheme: light;
+}
+
+/* Night palette («Midnight Soda»): everything that is not a theme token. */
+:root[data-cs-dark='true'] {
+  color-scheme: dark;
+  --cs-faint: #8F7AA3;
+  --cs-link-hover: #FFC2DC;
+  --cs-surface-soft: rgba(255, 255, 255, 0.04);
+  --cs-surface-row: rgba(255, 255, 255, 0.06);
+  --cs-surface-row-soft: rgba(255, 255, 255, 0.03);
+  --cs-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --cs-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.3);
+  --cs-shadow-row: none;
+  --cs-field-text: #FCE8F1;
+  --cs-chip-text: #FCE8F1;
+  --cs-tab-active: rgba(255, 255, 255, 0.14);
+  --cs-tab-shadow: 0 0 12px rgba(255, 95, 162, 0.25);
+  --cs-dashed: rgba(255, 140, 190, 0.5);
+  --cs-divider: rgba(255, 140, 190, 0.5);
+  --cs-bubble-char-border: rgba(255, 255, 255, 0.08);
+  --cs-bubble-user-border: rgba(255, 140, 190, 0.25);
+  --cs-bubble-system: rgba(255, 255, 255, 0.04);
+  --cs-card-band: #3A2818;
+  --cs-card-band-check: rgba(255, 95, 162, 0.4);
+  --cs-mint-text: #0B2A20;
+  --cs-mint-soft: rgba(62, 230, 181, 0.14);
+  --cs-mint-deep: #3EE6B5;
+  --cs-mint-ink: #3EE6B5;
+  --cs-rose-soft: rgba(255, 95, 162, 0.16);
+  --cs-rose-deep: #FF8CBE;
+  --cs-honey-soft: #2E2016;
+  --cs-honey-deep: #F3C989;
+  --cs-sky-soft: rgba(124, 198, 242, 0.12);
+  --cs-sky-deep: #A9DBF7;
+  --cs-lilac-soft: rgba(176, 138, 224, 0.16);
+  --cs-lilac-deep: #D3BDF0;
+  --cs-lilac: #B08AE0;
+  --cs-amber: #F3C989;
+  --cs-switch-off: rgba(255, 255, 255, 0.16);
+  --cs-code-bg: #120A1F;
+  --cs-mark-bg: rgba(62, 230, 181, 0.18);
+  --cs-mark-text: #3EE6B5;
+  --cs-orb-pink: radial-gradient(circle at 35% 30%, #FFD3E6, #FF7DB4 55%, #C93D7E);
+  --cs-orb-blue: radial-gradient(circle at 35% 30%, #E3F4FD, #7CC6F2 55%, #2F78B5);
+  --cs-orb-glow-pink: 0 0 50px rgba(255, 95, 162, 0.55);
+  --cs-orb-glow-blue: 0 0 46px rgba(95, 184, 240, 0.5);
+  --cs-blob-opacity: 0;
+  --cs-grain-blend: overlay;
+}

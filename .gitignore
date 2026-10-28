@@ -1,0 +1,11 @@
+node_modules/
+web/node_modules/
+web/dist/
+launcher/desktop/node_modules/
+launcher/desktop/dist/
+launcher/android/node_modules/
+launcher/android/android/
+data/
+*.log
+.DS_Store
+*.tsbuildinfo

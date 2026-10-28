@@ -1,0 +1,319 @@
+/* ───────── App shell ───────── */
+.cs-app {
+  position: relative;
+  height: 100dvh;
+  display: flex;
+  gap: 18px;
+  padding: 20px;
+  overflow: hidden;
+  color: var(--cs-text);
+  font-family: var(--cs-font-body);
+}
+
+.cs-app__main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cs-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 0 4px 4px;
+  margin: 0 -4px;
+  scroll-padding: 20px;
+}
+
+.cs-page--fixed {
+  overflow: hidden;
+}
+
+.cs-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.cs-columns--stretch {
+  align-items: stretch;
+}
+
+.cs-col-main {
+  flex: 999 1 460px;
+  min-width: 0;
+}
+
+.cs-col-side {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+/* ───────── Backdrop (bubbles, blobs, grain) ───────── */
+.cs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cs-backdrop__blob {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--cs-blob);
+  filter: blur(48px);
+  opacity: var(--cs-blob-opacity);
+}
+
+.cs-backdrop__pair {
+  position: absolute;
+  animation: cs-float 7s ease-in-out infinite;
+}
+
+.cs-backdrop__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(3px);
+}
+
+.cs-backdrop__orb--pink {
+  background: var(--cs-orb-pink);
+  box-shadow: var(--cs-orb-glow-pink);
+}
+
+.cs-backdrop__orb--blue {
+  background: var(--cs-orb-blue);
+  box-shadow: var(--cs-orb-glow-blue);
+}
+
+.cs-backdrop__grain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: var(--cs-grain);
+  mix-blend-mode: var(--cs-grain-blend);
+}
+
+.cs-backdrop__star {
+  position: absolute;
+  fill: #FFFFFF;
+  animation: cs-twinkle 3s ease-in-out infinite;
+}
+
+.cs-backdrop__image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.cs-backdrop__image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--cs-bg-solid) 35%, transparent);
+}
+
+:root:not([data-cs-dark='true']) .cs-backdrop__star {
+  display: none;
+}
+
+/* ───────── Rail (desktop navigation) ───────── */
+.cs-rail {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 88px;
+  padding: 14px 12px;
+  border-radius: var(--cs-r-lg);
+  background: var(--cs-surface);
+  backdrop-filter: blur(var(--cs-blur));
+  -webkit-backdrop-filter: blur(var(--cs-blur));
+  border: 1.5px solid var(--cs-border);
+  box-shadow: var(--cs-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.cs-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.cs-rail__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 0 10px;
+  text-decoration: none;
+}
+
+.cs-rail__brand span {
+  font-family: var(--cs-font-heading);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--cs-link);
+}
+
+.cs-rail__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 60px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  color: var(--cs-text);
+  font: 700 11px var(--cs-font-body);
+  flex: none;
+  transition: background 0.15s ease;
+}
+
+.cs-rail__item:hover {
+  color: var(--cs-text);
+  background: var(--cs-surface-row-soft);
+}
+
+.cs-rail__item[aria-current='page'] {
+  background: var(--cs-accent);
+  color: var(--cs-accent-text);
+  font-weight: 800;
+  box-shadow: var(--cs-glow);
+}
+
+.cs-rail__spacer {
+  flex: 1;
+}
+
+/* ───────── Bottom navigation (mobile) ───────── */
+.cs-bottom-nav {
+  display: none;
+}
+
+/* ───────── Mobile ───────── */
+@media (max-width: 760px) {
+  .cs-app {
+    padding: 0;
+    gap: 0;
+    flex-direction: column;
+  }
+
+  .cs-rail {
+    display: none;
+  }
+
+  .cs-app__main {
+    padding: max(env(safe-area-inset-top), 8px) 8px 0;
+  }
+
+  .cs-page {
+    gap: 12px;
+    padding-bottom: 8px;
+  }
+
+  .cs-bottom-nav {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .cs-bottom-nav__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    border-radius: 18px;
+    border: none;
+    background: transparent;
+    color: var(--cs-text);
+    text-decoration: none;
+    font: 700 11px var(--cs-font-body);
+  }
+
+  .cs-bottom-nav__item[aria-current='page'] {
+    background: var(--cs-accent);
+    color: var(--cs-accent-text);
+    font-weight: 800;
+  }
+
+  .cs-page-head {
+    padding: 12px 14px;
+    border-radius: 24px;
+  }
+
+  .cs-h1 {
+    font-size: 22px;
+  }
+
+  .cs-panel {
+    padding: 14px;
+    border-radius: 24px;
+  }
+
+  .cs-modal-backdrop {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .cs-modal {
+    padding: 16px;
+    border-radius: 26px;
+    max-height: 94dvh;
+  }
+
+  .cs-toasts {
+    right: 10px;
+    left: 10px;
+    bottom: 84px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .cs-page-head > .cs-row,
+  .cs-page-head .cs-row {
+    flex-wrap: wrap;
+  }
+
+  .cs-page-head .cs-btn {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+
+  .cs-page-head .cs-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .cs-page-head .cs-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    max-width: 100%;
+  }
+}

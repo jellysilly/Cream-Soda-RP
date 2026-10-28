@@ -1,0 +1,22 @@
+import { createRoot } from 'react-dom/client';
+import '@fontsource/nunito/400.css';
+import '@fontsource/nunito/400-italic.css';
+import '@fontsource/nunito/600.css';
+import '@fontsource/nunito/700.css';
+import '@fontsource/nunito/800.css';
+import '@fontsource/m-plus-rounded-1c/700.css';
+import '@fontsource/m-plus-rounded-1c/800.css';
+import '@fontsource/playfair-display/400-italic.css';
+import '@fontsource/jetbrains-mono/400.css';
+import '@fontsource/jetbrains-mono/600.css';
+import './styles/tokens.css';
+import './styles/base.css';
+import './styles/components.css';
+import './styles/layout.css';
+import './styles/chat.css';
+import './styles/pages.css';
+import { App } from './App';
+import { watchSafeModeKey } from './lib/theme';
+
+watchSafeModeKey();
+createRoot(document.getElementById('root')!).render(<App />);

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="425" height="425"
+  viewBox="0 0 425 425" role="img" aria-label="Cream Soda — AI roleplay">
+  <title>Cream Soda</title>
+  <desc>Rounded raspberry speech-bubble C with fizzy pastel bubbles and a sparkle.</desc>
+  
+<defs>
+  <linearGradient id="raspberry" x1="0" y1="0" x2="0.95" y2="1">
+    <stop offset="0" stop-color="#F12E7B"/>
+    <stop offset="0.63" stop-color="#D6216A"/>
+    <stop offset="1" stop-color="#CB195A"/>
+  </linearGradient>
+  <linearGradient id="ice" x1="0" y1="0" x2="0.7" y2="1">
+    <stop offset="0" stop-color="#D9F1FF"/>
+    <stop offset="1" stop-color="#A9DBF7"/>
+  </linearGradient>
+  <linearGradient id="blush" x1="0" y1="0" x2="0.8" y2="1">
+    <stop offset="0" stop-color="#FFE3EE"/>
+    <stop offset="1" stop-color="#F8C6D8"/>
+  </linearGradient>
+</defs>
+  <g transform="translate(20 20)">
+<!-- Cream Soda mark: dialogue silhouette, cream-soda C, bubbles and story spark -->
+<path fill="url(#raspberry)" d="M266 129
+  C247 94 213 85 174 88
+  C116 92 76 127 57 181
+  C40 234 53 293 83 327
+  L64 370 C59 382 68 392 79 386
+  L117 357 C162 386 227 374 276 342
+  C304 324 320 291 308 273
+  C298 258 280 254 265 265
+  C239 291 204 310 170 299
+  C133 286 115 258 120 225
+  C124 194 148 170 177 164
+  C198 160 214 172 232 182
+  C249 193 266 183 277 164
+  C283 154 278 143 266 129 Z"/>
+<path d="M95 166 C111 144 137 130 164 124" fill="none"
+  stroke="#FF9DC5" stroke-width="21" stroke-linecap="round"/>
+<circle cx="105" cy="209" r="11.5" fill="#FF9DC5"/>
+<path d="M267 317 C278 308 283 296 284 286" fill="none"
+  stroke="#FFF6E3" stroke-width="7" stroke-linecap="round" opacity=".95"/>
+<circle cx="257" cy="72" r="38" fill="url(#ice)"/>
+<circle cx="244" cy="57" r="10" fill="#FFFFFF" opacity=".97"/>
+<circle cx="318" cy="120" r="28" fill="url(#blush)"/>
+<circle cx="310" cy="110" r="7" fill="#FFFFFF"/>
+<circle cx="259" cy="158" r="17" fill="url(#ice)"/>
+<circle cx="253" cy="151" r="5" fill="#FFFFFF"/>
+<circle cx="221" cy="190" r="11" fill="url(#blush)"/>
+<circle cx="218" cy="186" r="3.7" fill="#FFFFFF"/>
+<path d="M346 35 C350 51 359 59 376 63 C360 68 352 76 348 92
+  C343 76 335 69 320 65 C336 60 343 52 346 35 Z"
+  fill="#FFF6E3" stroke="#47162F" stroke-width="2" stroke-linejoin="round"/>
+</g>
+</svg>

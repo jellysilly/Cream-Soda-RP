@@ -25,7 +25,7 @@ npm run build
 cd launcher/android
 npm install
 npm run add        # первый раз: создаёт android/, иконки, нативные настройки
-npm run apk        # android/app/build/outputs/apk/debug/app-debug.apk
+npm run apk        # android/app/build/outputs/apk/debug/*.apk
 ```
 
 Дальше после изменений достаточно `npm run sync` (или сразу `npm run apk`). Чтобы открыть проект в Android Studio, выполните `npm run open`.
@@ -37,20 +37,52 @@ npm run apk        # android/app/build/outputs/apk/debug/app-debug.apk
 | `npm run build` | Собирает экран лаунчера (`src/` → `www/`). Собирает Node-проект для телефона в `www/nodejs/`: сервер, собранный интерфейс, продакшн-зависимости и `node/main.cjs`. |
 | `npm run add` | `cap add android` + иконки и заставка из `resources/` + `scripts/patch-android.mjs`. |
 | `npm run sync` | Пересобирает и копирует всё в `android/`, затем снова применяет нативные настройки. |
-| `scripts/patch-android.mjs` | Вносит в манифест разрешение на HTTP к `127.0.0.1`, foreground-службу (`specialUse`), уведомления и модуль сканера QR. Кладёт `native/MainActivity.java` и иконку уведомления. Повторный запуск ничего не ломает. |
+| `scripts/patch-android.mjs` | Вносит в манифест разрешение на HTTP к `127.0.0.1`, foreground-службу (`specialUse`), уведомления и модуль сканера QR. Кладёт `native/MainActivity.java`, иконку уведомления и `native/cream-soda.gradle` (версия, APK по архитектурам, подпись). Повторный запуск ничего не ломает. |
 
 Папка `android/` генерируется и в git не хранится. Всё нативное лежит в `native/` и `scripts/patch-android.mjs`.
 
-### Релизная сборка
+Собирается отдельный APK для каждого типа процессора (только libnode занимает около 50 МБ на тип) и один универсальный:
 
-`npm run apk:release` собирает неподписанный APK. Подпишите его своим ключом: `apksigner` или настройка `signingConfigs` в `android/app/build.gradle`, см. [документацию Android](https://developer.android.com/studio/publish/app-signing).
+| Файл | Для чего |
+| --- | --- |
+| `*-arm64-v8a-*.apk` | почти все телефоны последних лет |
+| `*-armeabi-v7a-*.apk` | старые 32-битные телефоны |
+| `*-x86_64-*.apk` | эмуляторы и редкие x86-устройства |
+| `*-universal-*.apk` | подходит всем, но весит около 200 МБ |
+
+Версию приложения (`versionName` и `versionCode`) скрипт берёт из корневого `package.json`.
+
+### Релизная сборка и подпись
+
+`npm run apk:release` подписывает APK ключом из `keystore.properties` (файл и ключ в git не попадают):
+
+```properties
+storeFile=cream-soda-release.jks
+storePassword=…
+keyAlias=cream-soda
+keyPassword=…
+```
+
+Создать ключ можно так: `keytool -genkeypair -keystore cream-soda-release.jks -storetype PKCS12 -alias cream-soda -keyalg RSA -keysize 4096 -validity 36500`. **Храните ключ и пароль.** Android ставит обновление поверх только с той же подписью. Если подписать новую версию другим ключом, приложение придётся удалить, и данные в нём пропадут. Перед этим сделайте бэкап.
+
+Если `repo.maven.apache.org` отвечает 429 (Too Many Requests), подключите зеркало Maven Central от Google через init-скрипт Gradle:
+
+```groovy
+// ~/.gradle/init.d/maven-mirror.gradle
+def MIRROR = 'https://maven-central.storage-download.googleapis.com/maven2/'
+beforeSettings { settings -> settings.pluginManagement.repositories { maven { url MIRROR } } }
+allprojects {
+    buildscript.repositories { maven { url MIRROR } }
+    repositories { maven { url MIRROR } }
+}
+```
 
 ## Как это устроено
 
 ```
 src/            экран лаунчера (по макету), плагины Capacitor вызываются из src/native.js
 node/main.cjs   точка входа Node.js на телефоне: запускает сервер и общается с экраном через модуль bridge
-native/         MainActivity (сохранение файлов) и иконка уведомления
+native/         MainActivity (сохранение файлов), иконка уведомления, настройки Gradle
 resources/      исходники иконки и заставки для @capacitor/assets
 scripts/        prepare-node.mjs (www/nodejs) и patch-android.mjs
 ```
@@ -67,4 +99,4 @@ scripts/        prepare-node.mjs (www/nodejs) и patch-android.mjs
 - Node.js for Mobile Apps основан на Node 18.20, а у этой ветки Node закончилась поддержка. Сервер проверен на Node 18.20.8 и работает. В README плагина capacitor-nodejs перечислены оговорки по безопасности этого рантайма, прочитайте их перед публикацией сборки.
 - В рантайме нет модуля `Intl` (ICU). Сервер это учитывает. Интерфейс работает в WebView, а там ICU есть.
 - `child_process` на телефоне недоступен, поэтому установка расширений через git работает только на ПК. Расширения можно поставить на ПК и перенести бэкапом.
-- Сборку APK в этом репозитории не проверяли: в среде разработки не было Android SDK. Экран лаунчера проверен в браузере с заглушками плагинов. Node-часть проверена на Node 18 и 20 с заглушкой `bridge`. `MainActivity` проверена компиляцией против заглушек Android API.
+- APK собирается (Capacitor 8, compileSdk 36, AGP 8.13, JDK 21). На реальном устройстве и в эмуляторе его не запускали: в среде сборки не было KVM. Проверено другое: экран лаунчера в браузере с заглушками плагинов, Node-часть на Node 18 и 20 с заглушкой `bridge`, содержимое APK (манифест, подпись, libnode, Node-проект, `MainActivity`).

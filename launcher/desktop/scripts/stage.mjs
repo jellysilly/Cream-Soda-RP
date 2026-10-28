@@ -92,8 +92,7 @@ const pkg = {
       artifactName: 'Cream-Soda-Setup-${version}.${ext}',
     },
     portable: { artifactName: 'Cream-Soda-Portable-${version}.${ext}' },
-    mac: { target: ['dmg'], category: 'public.app-category.entertainment' },
-    dmg: { artifactName: 'Cream-Soda-${version}-${arch}.${ext}' },
+    mac: { target: ['dmg', 'zip'], category: 'public.app-category.entertainment', artifactName: 'Cream-Soda-${version}-mac-${arch}.${ext}' },
     linux: {
       target: ['AppImage', 'tar.gz'],
       category: 'Game',

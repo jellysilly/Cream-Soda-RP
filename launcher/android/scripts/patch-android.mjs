@@ -7,6 +7,8 @@
  *    «Работать в фоне», notification permission, ML Kit QR scanner module.
  *  - MainActivity: window.CreamSodaAndroid for saving exported files.
  *  - Notification icon.
+ *  - app/cream-soda.gradle: version from package.json, one APK per ABI,
+ *    release signing from keystore.properties.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -80,5 +82,15 @@ fs.writeFileSync(path.join(activityDir, 'MainActivity.java'), activity);
 const drawable = path.join(appDir, 'res', 'drawable');
 fs.mkdirSync(drawable, { recursive: true });
 fs.copyFileSync(path.join(android, 'native', 'ic_stat_soda.xml'), path.join(drawable, 'ic_stat_soda.xml'));
+
+// ───────── Gradle ─────────
+
+const appGradleDir = path.join(android, 'android', 'app');
+fs.copyFileSync(path.join(android, 'native', 'cream-soda.gradle'), path.join(appGradleDir, 'cream-soda.gradle'));
+const buildGradlePath = path.join(appGradleDir, 'build.gradle');
+const buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
+if (!buildGradle.includes("apply from: 'cream-soda.gradle'")) {
+  fs.writeFileSync(buildGradlePath, `${buildGradle.trimEnd()}\n\napply from: 'cream-soda.gradle'\n`);
+}
 
 console.log('[android] нативные настройки применены');

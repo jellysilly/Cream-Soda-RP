@@ -1,0 +1,44 @@
+// Cream Soda build settings for android/app, applied by scripts/patch-android.mjs.
+import groovy.json.JsonSlurper
+
+// Version comes from the root package.json: 1.4.2 → versionName "1.4.2", versionCode 10402.
+def pkg = new JsonSlurper().parse(rootProject.file('../../../package.json'))
+def parts = pkg.version.tokenize('.').collect { (it.replaceAll(/\D.*/, '') ?: '0') as int }
+
+android {
+    defaultConfig {
+        versionName pkg.version
+        versionCode parts[0] * 10000 + parts[1] * 100 + parts[2]
+    }
+
+    // libnode alone is ~50 MB per processor type, so build one APK per ABI plus a universal one.
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+            universalApk true
+        }
+    }
+
+    // Release signing from launcher/android/keystore.properties (kept out of git):
+    //   storeFile=cream-soda-release.jks   (relative to launcher/android, or absolute)
+    //   storePassword=…
+    //   keyAlias=cream-soda
+    //   keyPassword=…
+    def propsFile = rootProject.file('../keystore.properties')
+    if (propsFile.exists()) {
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        def store = new File(props.storeFile)
+        signingConfigs {
+            release {
+                storeFile store.isAbsolute() ? store : rootProject.file("../${props.storeFile}")
+                storePassword props.storePassword
+                keyAlias props.keyAlias
+                keyPassword props.keyPassword
+            }
+        }
+        buildTypes.release.signingConfig signingConfigs.release
+    }
+}

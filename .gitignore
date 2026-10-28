@@ -13,3 +13,7 @@ launcher/desktop/stage/
 launcher/desktop/ui/fonts/
 launcher/android/www/
 launcher/android/public/fonts/
+launcher/android/keystore.properties
+*.jks
+*.keystore
+release/

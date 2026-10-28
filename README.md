@@ -94,6 +94,12 @@ npm --prefix launcher/desktop run dist:linux  # AppImage и tar.gz
 
 Перед сборкой выполните `npm install` в `launcher/desktop` и `npm run build` в корне. Готовые файлы появляются в `launcher/desktop/dist`. Данные установленного приложения хранятся в папке пользователя (`%APPDATA%/Cream Soda/data`, `~/Library/Application Support/Cream Soda/data`, `~/.config/Cream Soda/data`). Portable-версия держит данные рядом с .exe, в папке «Cream Soda data».
 
+Сборки не подписаны сертификатами Microsoft и Apple, поэтому при первом запуске система предупредит:
+
+- **Windows**: «Windows защитила ваш компьютер» → «Подробнее» → «Выполнить в любом случае».
+- **macOS**: распакуйте zip, перенесите «Cream Soda» в «Программы», затем правый клик → «Открыть». На macOS 15 и новее: «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть». Если система пишет, что приложение повреждено, выполните `xattr -cr "/Applications/Cream Soda.app"`. Для Mac с Apple Silicon берите архив `mac-arm64`, для Mac на Intel — `mac-x64`.
+- **Linux**: `chmod +x Cream-Soda-*.AppImage`, затем запустите файл.
+
 ### Android
 
 Сервер работает прямо на телефоне. Сборка APK, устройство и ограничения описаны в [launcher/android/README.md](launcher/android/README.md).

@@ -1,7 +1,7 @@
 {
   "name": "cream-soda-launcher",
   "productName": "Cream Soda",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Cream Soda launcher: the engine, the server and the interface in one window",
   "private": true,
   "type": "module",

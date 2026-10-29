@@ -28,6 +28,8 @@ if (!fs.existsSync(javaDir)) {
 }
 
 const sha = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+// Every fixed copy starts with this line, so an earlier version of the fix is recognised too.
+const isOurCopy = (file) => fs.readFileSync(file, 'utf8').includes(`Modified copy of ${path.basename(file)} from capacitor-nodejs ${SUPPORTED_VERSION}`);
 const version = JSON.parse(fs.readFileSync(path.join(plugin, 'package.json'), 'utf8')).version;
 
 let failed = false;
@@ -36,7 +38,7 @@ for (const [name, originalSha] of Object.entries(FILES)) {
   const fixed = path.join(android, 'native', 'capacitor-nodejs', name);
   const current = sha(target);
   if (current === sha(fixed)) continue;
-  if (version === SUPPORTED_VERSION && current === originalSha) {
+  if (version === SUPPORTED_VERSION && (current === originalSha || isOurCopy(target))) {
     fs.copyFileSync(fixed, target);
     console.log(`[plugins] capacitor-nodejs: ${name} replaced with the fixed copy`);
   } else {

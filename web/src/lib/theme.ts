@@ -82,7 +82,7 @@ function sessionStorageGet(k: string): string | null {
   }
 }
 
-/** «Сломал вид? Запусти с Shift — свой CSS отключится.» */
+/** «Broke the look? Hold Shift while loading: the custom CSS turns off.» */
 export function watchSafeModeKey() {
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Shift') {
@@ -115,7 +115,7 @@ export function tokensToCss(theme: Theme): string {
   return `/* ${theme.name} · ${theme.note} */\n:root {\n${lines.join('\n')}\n  --cs-radius: ${theme.radius}px;\n}`;
 }
 
-/** Light CSS pretty-printer for «Форматировать». */
+/** Light CSS pretty-printer for «Prettify». */
 export function formatCss(css: string): string {
   let depth = 0;
   const out: string[] = [];

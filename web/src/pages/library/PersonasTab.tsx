@@ -7,6 +7,7 @@ import type { Persona, PersonaPosition, Role } from '../../lib/types';
 import { pickFiles, toKana, fmtNum } from '../../lib/utils';
 import { uploadImage, importPersonasInteractive, exportPersonas } from '../../lib/appActions';
 import { countTokens } from '../../lib/tokenizer';
+import { t } from '../../lib/i18n';
 
 export function PersonasTab({ query }: { query: string }) {
   const personas = useStore((s) => s.personas);
@@ -28,9 +29,9 @@ export function PersonasTab({ query }: { query: string }) {
       <section className="cs-panel cs-col-side" style={{ flex: '1 1 300px' }}>
         <div className="cs-panel-head">
           <h2 className="cs-h2" style={{ fontSize: 17 }}>
-            Персоны
+            {t('Personas')}
           </h2>
-          <button type="button" className="cs-icon-btn cs-icon-btn--mint cs-ml-auto" style={{ width: 40, height: 40 }} aria-label="Новая персона" onClick={() => setSel(upsert('personas', newPersona({ name: 'Новая персона' })).id)}>
+          <button type="button" className="cs-icon-btn cs-icon-btn--mint cs-ml-auto" style={{ width: 40, height: 40 }} aria-label={t('New persona')} onClick={() => setSel(upsert('personas', newPersona({ name: t('New persona') })).id)}>
             <Icon name="plus" size={18} stroke={2.2} />
           </button>
         </div>
@@ -39,17 +40,17 @@ export function PersonasTab({ query }: { query: string }) {
             <Avatar src={x.avatar} name={x.name} kana={x.kana} palette={x.palette} size={36} />
             <span className="cs-grow">
               <span className="cs-select-item__title">{x.name}</span>
-              <span className="cs-select-item__sub cs-ellipsis">{x.id === active ? 'активна' : x.title || x.description.slice(0, 50)}</span>
+              <span className="cs-select-item__sub cs-ellipsis">{x.id === active ? t('current') : x.title || x.description.slice(0, 50)}</span>
             </span>
           </button>
         ))}
-        {!list.length ? <Empty icon="user" title="Персон пока нет" /> : null}
+        {!list.length ? <Empty icon="user" title={t('No personas yet')} /> : null}
         <div className="cs-row">
           <button type="button" className="cs-btn cs-btn--sm cs-btn--flex" onClick={importPersonasInteractive}>
-            Импорт
+            {t('Import')}
           </button>
           <button type="button" className="cs-btn cs-btn--sm cs-btn--flex" onClick={() => exportPersonas()}>
-            Экспорт
+            {t('Export')}
           </button>
         </div>
       </section>
@@ -59,7 +60,7 @@ export function PersonasTab({ query }: { query: string }) {
             <button
               type="button"
               className="cs-avatar-edit"
-              aria-label="Сменить аватар"
+              aria-label={t('Change the avatar')}
               onClick={async () => {
                 const [f] = await pickFiles('image/*');
                 if (f) set({ avatar: await uploadImage('avatars', f, f.name) });
@@ -68,40 +69,40 @@ export function PersonasTab({ query }: { query: string }) {
               <Avatar src={p.avatar} name={p.name} kana={p.kana} palette={p.palette} size={84} ring />
             </button>
             <div className="cs-grid-fields cs-grow">
-              <Field label="Имя">
+              <Field label={t('Name')}>
                 <input className="cs-input cs-input--title" value={p.name} onChange={(e) => set({ name: e.target.value })} />
               </Field>
-              <Field label="Подпись">
-                <input className="cs-input" value={p.title} placeholder="например: поздний гость" onChange={(e) => set({ title: e.target.value })} />
+              <Field label={t('Tagline')}>
+                <input className="cs-input" value={p.title} placeholder={t('e.g. late guest')} onChange={(e) => set({ title: e.target.value })} />
               </Field>
-              <Field label="Кана">
+              <Field label={t('Kana')}>
                 <input className="cs-input" value={p.kana} placeholder={toKana(p.name)} onChange={(e) => set({ kana: e.target.value })} />
               </Field>
             </div>
           </div>
-          <Field label={`Описание · ${fmtNum(countTokens(p.description))} ток.`} hint="Подставляется в промпт как {{persona}}: внешность, характер, отношения.">
+          <Field label={t('Description · {x} tok.', { x: fmtNum(countTokens(p.description)) })} hint={t('Goes into the prompt as {{persona}}: appearance, character, relationships.')}>
             <textarea className="cs-textarea cs-textarea--lg" rows={7} value={p.description} onChange={(e) => set({ description: e.target.value })} />
           </Field>
-          <Field label="Где в промпте">
+          <Field label={t('Where in the prompt')}>
             <Choices<PersonaPosition>
               small
               value={p.position}
               onChange={(position) => set({ position })}
               items={[
-                { id: 'prompt', label: 'В блоке персоны' },
-                { id: 'an_top', label: 'Над заметкой автора' },
-                { id: 'an_bottom', label: 'Под заметкой автора' },
-                { id: 'depth', label: 'На глубине' },
-                { id: 'none', label: 'Не отправлять' },
+                { id: 'prompt', label: t('In the persona block') },
+                { id: 'an_top', label: t("Above the author's note") },
+                { id: 'an_bottom', label: t("Below the author's note") },
+                { id: 'depth', label: t('At depth') },
+                { id: 'none', label: t("Don't send") },
               ]}
             />
           </Field>
           {p.position === 'depth' ? (
             <div className="cs-grid-fields cs-grid-fields--sm">
-              <Field label="Глубина">
+              <Field label={t('Depth')}>
                 <input className="cs-input" type="number" min={0} value={p.depth} onChange={(e) => set({ depth: Math.max(0, Number(e.target.value)) })} />
               </Field>
-              <Field label="Роль">
+              <Field label={t('Role')}>
                 <select className="cs-select" value={p.role} onChange={(e) => set({ role: e.target.value as Role })}>
                   <option value="system">system</option>
                   <option value="user">user</option>
@@ -110,7 +111,7 @@ export function PersonasTab({ query }: { query: string }) {
               </Field>
             </div>
           ) : null}
-          <span className="cs-label">Включать автоматически с персонажами</span>
+          <span className="cs-label">{t('Turn on automatically with characters')}</span>
           <div className="cs-chips">
             {characters.map((c) => (
               <button
@@ -126,19 +127,19 @@ export function PersonasTab({ query }: { query: string }) {
           </div>
           <div className="cs-row cs-row--wrap">
             <button type="button" className="cs-btn cs-btn--primary cs-btn--flex" disabled={p.id === active} onClick={() => updateSettings({ activePersonaId: p.id })}>
-              {p.id === active ? 'Активна' : 'Сделать активной'}
+              {p.id === active ? t('Active') : t('Make active')}
             </button>
             <button
               type="button"
               className="cs-btn cs-btn--danger"
               onClick={async () => {
-                if (!(await confirmDialog(`Удалить персону «${p.name}»?`, { ok: 'Удалить' }))) return;
+                if (!(await confirmDialog(t('Delete the persona “{name}”?', { name: p.name }), { ok: t('Delete') }))) return;
                 await removeItem('personas', p.id);
-                toast('Персона удалена');
+                toast(t('Persona deleted'));
                 setSel(personas.find((x) => x.id !== p.id)?.id || '');
               }}
             >
-              Удалить
+              {t('Delete')}
             </button>
           </div>
         </section>

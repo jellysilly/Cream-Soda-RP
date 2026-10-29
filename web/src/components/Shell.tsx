@@ -2,17 +2,18 @@ import { useStore, navigate, type Route, getState, currentThemeId, isNight } fro
 import { Icon, SodaGlass } from './Icon';
 import { openMenu } from './ui';
 import { toggleNight } from '../lib/appActions';
+import { t } from '../lib/i18n';
 
 export const NAV: { route: Route; label: string; icon: string }[] = [
-  { route: 'chat', label: 'Чат', icon: 'chat' },
-  { route: 'library', label: 'Чары', icon: 'chars' },
-  { route: 'presets', label: 'Пресеты', icon: 'presets' },
-  { route: 'generator', label: 'Генератор', icon: 'generator' },
-  { route: 'memory', label: 'Память', icon: 'memory' },
-  { route: 'images', label: 'Картинки', icon: 'images' },
-  { route: 'regex', label: 'Регексы', icon: 'regex' },
-  { route: 'modules', label: 'Модули', icon: 'modules' },
-  { route: 'settings', label: 'Настройки', icon: 'settings' },
+  { route: 'chat', label: t('Chat'), icon: 'chat' },
+  { route: 'library', label: t('Chars'), icon: 'chars' },
+  { route: 'presets', label: t('Presets'), icon: 'presets' },
+  { route: 'generator', label: t('Generator'), icon: 'generator' },
+  { route: 'memory', label: t('Memory'), icon: 'memory' },
+  { route: 'images', label: t('Images'), icon: 'images' },
+  { route: 'regex', label: t('Regexes'), icon: 'regex' },
+  { route: 'modules', label: t('Modules'), icon: 'modules' },
+  { route: 'settings', label: t('Settings'), icon: 'settings' },
 ];
 
 function href(route: Route) {
@@ -21,9 +22,9 @@ function href(route: Route) {
 
 export function Rail() {
   const route = useStore((s) => s.route);
-  const dark = useStore((s) => !!s.themes.find((t) => t.id === currentThemeId(s))?.dark);
+  const dark = useStore((s) => !!s.themes.find((th) => th.id === currentThemeId(s))?.dark);
   return (
-    <nav className="cs-rail" aria-label="Разделы">
+    <nav className="cs-rail" aria-label={t('Sections')}>
       <a className="cs-rail__brand" href={href('chat')} onClick={(e) => (e.preventDefault(), navigate('chat'))}>
         <SodaGlass dark={dark} />
         <span>ソーダ</span>
@@ -53,7 +54,7 @@ export function BottomNav() {
   const more = NAV.filter((n) => !primary.includes(n.route));
   const moreActive = !primary.includes(route);
   return (
-    <nav className="cs-bottom-nav" aria-label="Разделы">
+    <nav className="cs-bottom-nav" aria-label={t('Sections')}>
       {NAV.filter((n) => primary.includes(n.route)).map((n) => (
         <a
           key={n.route}
@@ -78,7 +79,7 @@ export function BottomNav() {
             ...more.map((n) => ({ label: n.label, icon: n.icon, onClick: () => navigate(n.route) })),
             { separator: true, label: '' },
             {
-              label: isNight(getState()) ? 'Дневная тема' : 'Ночная тема',
+              label: isNight(getState()) ? t('Day theme') : t('Night theme'),
               icon: isNight(getState()) ? 'sun' : 'moon',
               onClick: toggleNight,
             },
@@ -86,7 +87,7 @@ export function BottomNav() {
         }
       >
         <Icon name="dots" size={20} />
-        Ещё
+        {t('More')}
       </button>
     </nav>
   );
@@ -95,7 +96,7 @@ export function BottomNav() {
 export function Backdrop() {
   const chatBg = useStore((s) => s.chat?.meta.background);
   const sceneBg = useStore((s) => s.chat?.meta.sceneImage);
-  const theme = useStore((s) => s.themes.find((t) => t.id === currentThemeId(s)));
+  const theme = useStore((s) => s.themes.find((th) => th.id === currentThemeId(s)));
   const route = useStore((s) => s.route);
   let image = '';
   if (route === 'chat') {
@@ -140,10 +141,10 @@ export function Toasts() {
   const toasts = useStore((s) => s.toasts);
   return (
     <div className="cs-toasts" role="status" aria-live="polite">
-      {toasts.map((t) => (
-        <div key={t.id} className={`cs-toast cs-toast--${t.kind}`}>
+      {toasts.map((item) => (
+        <div key={item.id} className={`cs-toast cs-toast--${item.kind}`}>
           <span className="cs-dot" style={{ marginTop: 5 }} />
-          <p>{t.text}</p>
+          <p>{item.text}</p>
         </div>
       ))}
     </div>

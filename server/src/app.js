@@ -52,7 +52,7 @@ export function createApp(ctx) {
     req.isLocal = local;
     const host = req.headers.host || '';
     if (!isLoopbackHost(host) && !isIpLiteral(host) && !(state.allowedHosts || []).includes(host.replace(/:\d+$/, ''))) {
-      return res.status(403).type('text/plain; charset=utf-8').send('Cream Soda: неизвестный адрес хоста. Откройте приложение по IP-адресу.');
+      return res.status(403).type('text/plain; charset=utf-8').send(say(req, 'Cream Soda: unknown host name. Open the app by its IP address.', 'Cream Soda: неизвестный адрес хоста. Откройте приложение по IP-адресу.'));
     }
     const origin = req.headers.origin;
     if (origin && req.method !== 'GET' && req.method !== 'HEAD') {
@@ -63,10 +63,10 @@ export function createApp(ctx) {
       } catch {
         ok = false;
       }
-      if (!ok) return res.status(403).json({ error: 'Запрос с чужого сайта отклонён' });
+      if (!ok) return res.status(403).json({ error: 'Request from another site rejected' });
     }
     if (local) return next();
-    if (!state.lan) return res.status(403).type('text/plain; charset=utf-8').send('Cream Soda: доступ из сети выключен в лаунчере.');
+    if (!state.lan) return res.status(403).type('text/plain; charset=utf-8').send(say(req, 'Cream Soda: network access is off in the launcher.', 'Cream Soda: доступ из сети выключен в лаунчере.'));
     const cookieToken = /(?:^|;\s*)cs_lan=([^;]+)/.exec(req.headers.cookie || '')?.[1];
     const queryToken = typeof req.query.k === 'string' ? req.query.k : '';
     const headerToken = req.headers['x-cs-token'];
@@ -76,12 +76,12 @@ export function createApp(ctx) {
       return next();
     }
     if (cookieToken === lanToken || headerToken === lanToken) return next();
-    res.status(401).type('text/html; charset=utf-8').send(lockedPage());
+    res.status(401).type('text/html; charset=utf-8').send(lockedPage(req));
   });
 
   const json = express.json({ limit: '64mb' });
   const raw = express.raw({ type: () => true, limit: '200mb' });
-  const localOnly = (req, res, next) => (req.isLocal ? next() : next(httpError(403, 'Доступно только на этом устройстве')));
+  const localOnly = (req, res, next) => (req.isLocal ? next() : next(httpError(403, 'Available only on this device')));
 
   // ───────── Bootstrap ─────────
   app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION }));
@@ -156,7 +156,7 @@ export function createApp(ctx) {
     '/api/files/:kind',
     raw,
     asyncRoute(async (req, res) => {
-      if (!Buffer.isBuffer(req.body) || !req.body.length) throw httpError(400, 'Пустой файл');
+      if (!Buffer.isBuffer(req.body) || !req.body.length) throw httpError(400, 'Empty file');
       const dir = typeof req.query.dir === 'string' ? req.query.dir : '';
       res.json(await storage.saveUpload(req.params.kind, req.body, String(req.query.name || ''), dir));
     }),
@@ -190,13 +190,13 @@ export function createApp(ctx) {
     json,
     asyncRoute(async (req, res) => {
       let url = String(req.body?.url || '').trim();
-      if (!/^https?:\/\//.test(url)) throw httpError(400, 'Нужна ссылка http(s)');
+      if (!/^https?:\/\//.test(url)) throw httpError(400, 'An http(s) link is needed');
       const chub = /^https?:\/\/(?:www\.)?(?:chub\.ai|characterhub\.org)\/characters\/([^/?#]+\/[^/?#]+)/.exec(url);
       if (chub) url = `https://avatars.charhub.io/avatars/${chub[1]}/chara_card_v2.png`;
       const up = await upstreamFetch(url, { timeoutMs: 60000 });
-      if (!up.ok) throw httpError(up.status, `Не удалось скачать: HTTP ${up.status}`);
+      if (!up.ok) throw httpError(up.status, `Download failed: HTTP ${up.status}`);
       const buf = Buffer.from(await up.arrayBuffer());
-      if (buf.length > 50 * 1024 * 1024) throw httpError(413, 'Файл слишком большой');
+      if (buf.length > 50 * 1024 * 1024) throw httpError(413, 'The file is too large');
       res.setHeader('Content-Type', up.headers.get('content-type') || 'application/octet-stream');
       res.setHeader('X-File-Name', encodeURIComponent(decodeURIComponent(url.split('/').pop().split('?')[0] || 'file')));
       res.send(buf);
@@ -210,7 +210,7 @@ export function createApp(ctx) {
     json,
     asyncRoute(async (req, res) => {
       const name = req.params.name;
-      if (!/^[\w:\-.]{1,120}$/.test(name)) throw httpError(400, 'Некорректное имя ключа');
+      if (!/^[\w:\-.]{1,120}$/.test(name)) throw httpError(400, 'Invalid key name');
       await secrets.set(name, req.body?.value || '');
       res.json({ ok: true, masked: mask(req.body?.value || '') });
     }),
@@ -225,7 +225,7 @@ export function createApp(ctx) {
   async function resolveConnection(body) {
     let conn = body.connection;
     if (!conn && body.connectionId) conn = await storage.get('connections', String(body.connectionId));
-    if (!conn) throw httpError(400, 'Не выбран профиль подключения. Откройте Настройки → Подключения.');
+    if (!conn) throw httpError(400, 'No connection profile selected. Open Settings → Connections.');
     let key = '';
     if (typeof body.key === 'string' && body.key) key = body.key;
     else if (conn.id) key = await secrets.get(`conn:${conn.id}`);
@@ -270,7 +270,7 @@ export function createApp(ctx) {
   app.get('/api/llm/log', (req, res) => res.json(requestLog.list()));
   app.get('/api/llm/log/:id', (req, res) => {
     const item = requestLog.get(req.params.id);
-    if (!item) return res.status(404).json({ error: 'Запись не найдена' });
+    if (!item) return res.status(404).json({ error: 'Entry not found' });
     res.json(item);
   });
 
@@ -286,7 +286,7 @@ export function createApp(ctx) {
         if (!res.writableEnded) controller.abort();
       });
       const started = Date.now();
-      const entry = requestLog.start({ label: req.body?.label || 'Картинка', api: `images:${cfg.format || 'custom'}`, model: cfg.model || '', url: cfg.endpoint, request: req.body?.params });
+      const entry = requestLog.start({ label: req.body?.label || 'Image', api: `images:${cfg.format || 'custom'}`, model: cfg.model || '', url: cfg.endpoint, request: req.body?.params });
       try {
         const images = await generateImages(cfg, key, req.body?.params || {}, { signal: controller.signal });
         const dir = isValidId(String(req.body?.dir || '')) ? String(req.body.dir) : 'gallery';
@@ -297,7 +297,7 @@ export function createApp(ctx) {
         }
         entry.status = 200;
         entry.duration = Date.now() - started;
-        entry.response = `${saved.length} изобр.`;
+        entry.response = `${saved.length} img.`;
         res.json({ images: saved });
       } catch (err) {
         entry.status = err.status || 500;
@@ -411,38 +411,54 @@ export function createApp(ctx) {
     app.get('/', (req, res) =>
       res
         .type('text/html; charset=utf-8')
-        .send('<h1>Cream Soda</h1><p>Интерфейс ещё не собран. Выполните <code>npm run build</code> или запустите <code>npm run dev</code>.</p>'),
+        .send(
+          say(
+            req,
+            '<h1>Cream Soda</h1><p>The interface is not built yet. Run <code>npm run build</code> or start <code>npm run dev</code>.</p>',
+            '<h1>Cream Soda</h1><p>Интерфейс ещё не собран. Выполните <code>npm run build</code> или запустите <code>npm run dev</code>.</p>',
+          ),
+        ),
     );
   }
 
   // ───────── Errors ─────────
-  app.use('/api', (req, res) => res.status(404).json({ error: 'Неизвестный адрес API' }));
+  app.use('/api', (req, res) => res.status(404).json({ error: 'Unknown API address' }));
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
     const status = err.status || err.statusCode || 500;
     if (status >= 500) console.error('[server]', req.method, req.path, err.message);
     if (res.headersSent) return res.end();
-    res.status(status).json({ error: err.message || 'Внутренняя ошибка' });
+    res.status(status).json({ error: err.message || 'Internal error' });
   });
 
   ctx.autoBackup = async () => {
     try {
       const name = await runAutoBackup(paths, secrets, await storage.getDoc('settings'));
-      if (name) console.log(`[backup] автобэкап сохранён: ${name}`);
+      if (name) console.log(`[backup] auto backup saved: ${name}`);
     } catch (err) {
-      console.warn('[backup] автобэкап не удался:', err.message);
+      console.warn('[backup] auto backup failed:', err.message);
     }
   };
 
   return { app, storage };
 }
 
-function lockedPage() {
-  return `<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+/** Pages the server renders itself follow the browser language: Russian or English. */
+function prefersRussian(req) {
+  return /^ru\b/i.test(String(req.headers['accept-language'] || ''));
+}
+
+function say(req, en, ru) {
+  return prefersRussian(req) ? ru : en;
+}
+
+function lockedPage(req) {
+  const ru = prefersRussian(req);
+  return `<!doctype html><html lang="${ru ? 'ru' : 'en'}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cream Soda</title>
 <body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#F5AEC8,#FBE2EC 72%,#D3EBF8);font-family:system-ui,sans-serif;color:#47162F">
 <div style="max-width:340px;padding:24px;border-radius:28px;background:rgba(255,255,255,.75);text-align:center">
 <h1 style="margin:0 0 8px;font-size:22px">Cream Soda</h1>
-<p style="margin:0;color:#85395E">Отсканируйте QR-код в лаунчере на компьютере, чтобы открыть приложение с этого устройства.</p>
+<p style="margin:0;color:#85395E">${ru ? 'Отсканируйте QR-код в лаунчере на компьютере, чтобы открыть приложение с этого устройства.' : 'Scan the QR code in the launcher on the computer to open the app on this device.'}</p>
 </div></body></html>`;
 }

@@ -4,16 +4,17 @@ import { Switch, Kana, confirmDialog, openMenu } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
 import { extensionEnabled, setExtensionEnabled, loadExtensions } from '../../lib/extensions';
+import { t } from '../../lib/i18n';
 
 export const BUILTIN_MODULES: { id: string; name: string; note: string; kana: string; bg: string; fg: string }[] = [
-  { id: 'memory', name: 'Memory Book', note: 'встроено', kana: 'メ', bg: 'var(--cs-mint-soft)', fg: 'var(--cs-mint-deep)' },
-  { id: 'impersonate', name: 'Impersonate+', note: 'встроено', kana: 'ナ', bg: 'var(--cs-rose-soft)', fg: 'var(--cs-rose-deep)' },
-  { id: 'images', name: 'Генератор изображений', note: 'встроено · свой API', kana: 'エ', bg: 'var(--cs-sky-soft)', fg: 'var(--cs-sky-deep)' },
-  { id: 'tts', name: 'Озвучка (TTS)', note: 'встроено · голоса системы', kana: 'コ', bg: 'var(--cs-lilac-soft)', fg: 'var(--cs-lilac-deep)' },
-  { id: 'translate', name: 'Переводчик чата', note: 'встроено · через модель', kana: 'ヤ', bg: 'var(--cs-honey-soft)', fg: 'var(--cs-honey-deep)' },
-  { id: 'dice', name: 'Кубики и статы', note: 'встроено · /roll', kana: 'サ', bg: 'var(--cs-rose-soft)', fg: 'var(--cs-rose-deep)' },
-  { id: 'quickreplies', name: 'Быстрые ответы', note: 'встроено · кнопки над вводом', kana: 'ク', bg: 'var(--cs-mint-soft)', fg: 'var(--cs-mint-deep)' },
-  { id: 'expressions', name: 'Выражения', note: 'встроено · спрайты эмоций', kana: 'カ', bg: 'var(--cs-sky-soft)', fg: 'var(--cs-sky-deep)' },
+  { id: 'memory', name: 'Memory Book', note: t('built-in'), kana: 'メ', bg: 'var(--cs-mint-soft)', fg: 'var(--cs-mint-deep)' },
+  { id: 'impersonate', name: 'Impersonate+', note: t('built-in'), kana: 'ナ', bg: 'var(--cs-rose-soft)', fg: 'var(--cs-rose-deep)' },
+  { id: 'images', name: t('Image generator'), note: t('built-in · your own API'), kana: 'エ', bg: 'var(--cs-sky-soft)', fg: 'var(--cs-sky-deep)' },
+  { id: 'tts', name: t('Text to speech (TTS)'), note: t('built-in · system voices'), kana: 'コ', bg: 'var(--cs-lilac-soft)', fg: 'var(--cs-lilac-deep)' },
+  { id: 'translate', name: t('Chat translator'), note: t('built-in · through the model'), kana: 'ヤ', bg: 'var(--cs-honey-soft)', fg: 'var(--cs-honey-deep)' },
+  { id: 'dice', name: t('Dice and stats'), note: t('built-in · /roll'), kana: 'サ', bg: 'var(--cs-rose-soft)', fg: 'var(--cs-rose-deep)' },
+  { id: 'quickreplies', name: t('Quick replies'), note: t('built-in · buttons above the input'), kana: 'ク', bg: 'var(--cs-mint-soft)', fg: 'var(--cs-mint-deep)' },
+  { id: 'expressions', name: t('Expressions'), note: t('built-in · emotion sprites'), kana: 'カ', bg: 'var(--cs-sky-soft)', fg: 'var(--cs-sky-deep)' },
 ];
 
 export function ExtensionsSection() {
@@ -31,28 +32,28 @@ export function ExtensionsSection() {
       const ext = await api.installExtension(url.trim());
       setState({ extensions: await api.extensions() });
       setUrl('');
-      toast(`Расширение «${ext.displayName}» установлено`);
+      toast(t('Extension “{displayName}” installed', { displayName: ext.displayName }));
       await loadExtensions();
     } catch (err) {
-      toastError(err, 'Установка');
+      toastError(err, t('Installing'));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <section aria-label="Расширения" className="cs-panel cs-panel--pad-lg">
+    <section aria-label={t('Extensions')} className="cs-panel cs-panel--pad-lg">
       <div className="cs-panel-head">
         <h2 className="cs-h2" style={{ fontSize: 19 }}>
-          Расширения
+          {t('Extensions')}
         </h2>
         <Kana>トッピング</Kana>
         <label className="cs-inline-field cs-ml-auto" style={{ flex: '0 1 380px' }}>
           Git
-          <input type="url" placeholder="ссылка на репозиторий расширения" value={url} disabled={!isLocal} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && install()} />
+          <input type="url" placeholder={t('link to the extension repository')} value={url} disabled={!isLocal} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && install()} />
           <button type="button" className="cs-btn cs-btn--primary cs-btn--sm" style={{ minHeight: 34 }} disabled={busy || !url.trim()} onClick={install}>
             {busy ? <span className="cs-spinner" style={{ width: 16, height: 16 }} /> : null}
-            Установить
+            {t('Install')}
           </button>
         </label>
       </div>
@@ -66,7 +67,7 @@ export function ExtensionsSection() {
               <div style={{ fontWeight: 800, fontSize: 14 }}>{m.name}</div>
               <div style={{ fontSize: 12, color: 'var(--cs-muted)' }}>{m.note}</div>
             </div>
-            <Switch checked={!!enabled[m.id]} label={enabled[m.id] ? 'Выключить' : 'Включить'} onChange={(v) => updateSettingsSection('extensions', { enabled: { ...getState().settings.extensions.enabled, [m.id]: v } })} />
+            <Switch checked={!!enabled[m.id]} label={enabled[m.id] ? t('Turn off') : t('Turn on')} onChange={(v) => updateSettingsSection('extensions', { enabled: { ...getState().settings.extensions.enabled, [m.id]: v } })} />
           </div>
         ))}
         {extensions.map((e) => (
@@ -79,39 +80,39 @@ export function ExtensionsSection() {
                 {e.displayName}
               </div>
               <div className="cs-ellipsis" style={{ fontSize: 12, color: 'var(--cs-muted)' }}>
-                {[e.version && `v${e.version}`, e.author || 'сообщество'].filter(Boolean).join(' · ')}
+                {[e.version && `v${e.version}`, e.author || t('community')].filter(Boolean).join(' · ')}
               </div>
             </div>
             <button
               type="button"
               className="cs-icon-btn cs-icon-btn--xs"
-              aria-label="Действия"
+              aria-label={t('Actions')}
               onClick={(ev) =>
                 openMenu(ev.currentTarget, [
-                  { label: 'Страница проекта', icon: 'external', hidden: !e.homePage, onClick: () => window.open(e.homePage, '_blank', 'noopener') },
+                  { label: t('Project page'), icon: 'external', hidden: !e.homePage, onClick: () => window.open(e.homePage, '_blank', 'noopener') },
                   {
-                    label: 'Обновить (git pull)',
+                    label: t('Update (git pull)'),
                     icon: 'refresh',
                     hidden: !e.isGit || !isLocal,
                     onClick: async () => {
                       try {
                         const r = await api.updateExtension(e.name);
-                        toast(r.output || 'Обновлено. Перезагрузите страницу.');
+                        toast(r.output || t('Updated. Reload the page.'));
                       } catch (err) {
                         toastError(err);
                       }
                     },
                   },
                   {
-                    label: 'Удалить',
+                    label: t('Delete'),
                     icon: 'trash',
                     danger: true,
                     hidden: !isLocal,
                     onClick: async () => {
-                      if (!(await confirmDialog(`Удалить расширение «${e.displayName}»?`, { ok: 'Удалить' }))) return;
+                      if (!(await confirmDialog(t('Delete the extension “{displayName}”?', { displayName: e.displayName }), { ok: t('Delete') }))) return;
                       await api.removeExtension(e.name);
                       setState({ extensions: await api.extensions() });
-                      toast('Удалено. Перезагрузите страницу, чтобы выгрузить код.');
+                      toast(t('Deleted. Reload the page to unload its code.'));
                     },
                   },
                 ])
@@ -121,17 +122,17 @@ export function ExtensionsSection() {
             </button>
             <Switch
               checked={extensionEnabled(e.name)}
-              label={extensionEnabled(e.name) ? 'Выключить' : 'Включить'}
+              label={extensionEnabled(e.name) ? t('Turn off') : t('Turn on')}
               onChange={(v) => {
                 setExtensionEnabled(e.name, v);
-                toast(v ? 'Включено — загружаю…' : 'Выключено. Код выгрузится после перезагрузки страницы.');
+                toast(v ? t('On, loading…') : t('Off. The code unloads after a page reload.'));
                 if (v) loadExtensions();
               }}
             />
           </div>
         ))}
       </div>
-      {!isLocal ? <p className="cs-hint">Устанавливать и удалять расширения можно только на компьютере, где запущен сервер.</p> : null}
+      {!isLocal ? <p className="cs-hint">{t('Extensions can be installed and removed only on the computer where the server runs.')}</p> : null}
     </section>
   );
 }

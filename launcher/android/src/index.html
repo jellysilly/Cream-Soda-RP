@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -27,27 +27,27 @@
 
       <section class="card">
         <div class="row">
-          <h2>Сервер на телефоне</h2>
+          <h2 data-i18n="Server on the phone">Server on the phone</h2>
           <span class="version" id="version">v…</span>
         </div>
         <ol class="steps">
-          <li id="step-engine"><span class="mark" aria-hidden="true"></span><span class="label">Распаковываю движок…</span></li>
-          <li id="step-server"><span class="mark" aria-hidden="true"></span><span class="label">Запуск сервера</span></li>
-          <li id="step-ui"><span class="mark" aria-hidden="true"></span><span class="label">Открыть интерфейс</span></li>
+          <li id="step-engine"><span class="mark" aria-hidden="true"></span><span class="label">Unpacking the engine…</span></li>
+          <li id="step-server"><span class="mark" aria-hidden="true"></span><span class="label">Server start</span></li>
+          <li id="step-ui"><span class="mark" aria-hidden="true"></span><span class="label">Open the interface</span></li>
         </ol>
-        <div class="progress" role="progressbar" aria-label="Запуск" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress" role="progressbar" aria-label="Startup" data-i18n-aria="Startup" aria-valuemin="0" aria-valuemax="100">
           <div class="progress__bar" id="progress"></div>
         </div>
         <p class="error" id="error" hidden></p>
         <button type="button" class="open" id="btn-open" disabled>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5z" /></svg>
-          <span id="open-text">Открыть</span>
+          <span id="open-text">Open</span>
         </button>
       </section>
 
       <section class="toggles">
-        <label class="toggle">Работать в фоне<input type="checkbox" id="background" /></label>
-        <label class="toggle toggle--dashed">Не давать экрану гаснуть<input type="checkbox" id="awake" /></label>
+        <label class="toggle"><span data-i18n="Run in the background">Run in the background</span><input type="checkbox" id="background" /></label>
+        <label class="toggle toggle--dashed"><span data-i18n="Keep the screen on">Keep the screen on</span><input type="checkbox" id="awake" /></label>
       </section>
 
       <button type="button" class="pc" id="btn-pc">
@@ -55,24 +55,24 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8" /></svg>
         </span>
         <span class="pc__text">
-          <span class="pc__title">Подключиться к ПК</span>
-          <span class="pc__hint">Сканировать QR из лаунчера на компьютере</span>
+          <span class="pc__title" data-i18n="Connect to a PC">Connect to a PC</span>
+          <span class="pc__hint" data-i18n="Scan the QR code from the launcher on the computer">Scan the QR code from the launcher on the computer</span>
         </span>
       </button>
 
       <nav class="footer">
-        <button type="button" class="link" id="btn-updates">Обновления</button>
-        <button type="button" class="link" id="btn-backup">Бэкап</button>
-        <button type="button" class="link" id="btn-logs">Логи</button>
+        <button type="button" class="link" id="btn-updates" data-i18n="Updates">Updates</button>
+        <button type="button" class="link" id="btn-backup" data-i18n="Backup">Backup</button>
+        <button type="button" class="link" id="btn-logs" data-i18n="Logs">Logs</button>
       </nav>
 
       <div class="overlay" id="logs" hidden>
         <div class="overlay__card">
           <div class="row">
-            <h2>Логи сервера</h2>
-            <button type="button" class="chip" id="btn-logs-refresh">Обновить</button>
-            <button type="button" class="chip" id="btn-logs-save">Сохранить</button>
-            <button type="button" class="round" id="btn-logs-close" aria-label="Закрыть">
+            <h2 data-i18n="Server logs">Server logs</h2>
+            <button type="button" class="chip" id="btn-logs-refresh" data-i18n="Refresh">Refresh</button>
+            <button type="button" class="chip" id="btn-logs-save" data-i18n="Save">Save</button>
+            <button type="button" class="round" id="btn-logs-close" aria-label="Close" data-i18n-aria="Close">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17" /></svg>
             </button>
           </div>
@@ -82,12 +82,12 @@
 
       <div class="overlay" id="manual" hidden>
         <form class="overlay__card overlay__card--small" id="manual-form">
-          <h2>Адрес компьютера</h2>
-          <p class="hint">Сканер QR недоступен. Введите адрес из лаунчера на ПК — он под QR-кодом, например 192.168.1.12:8000.</p>
+          <h2 data-i18n="Computer address">Computer address</h2>
+          <p class="hint" data-i18n="The QR scanner is not available. Enter the address from the launcher on the PC: it is under the QR code, e.g. 192.168.1.12:8000.">The QR scanner is not available. Enter the address from the launcher on the PC: it is under the QR code, e.g. 192.168.1.12:8000.</p>
           <input id="manual-addr" inputmode="url" autocomplete="off" placeholder="192.168.1.12:8000" />
           <div class="row row--end">
-            <button type="button" class="chip" id="btn-manual-cancel">Отмена</button>
-            <button type="submit" class="chip chip--accent">Подключиться</button>
+            <button type="button" class="chip" id="btn-manual-cancel" data-i18n="Cancel">Cancel</button>
+            <button type="submit" class="chip chip--accent" data-i18n="Connect">Connect</button>
           </div>
         </form>
       </div>

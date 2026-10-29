@@ -12,6 +12,7 @@ import { importCharactersInteractive } from '../../lib/appActions';
 import type { ChatSummary } from '../../lib/types';
 import { fmtDate } from '../../lib/utils';
 import { setState } from '../../lib/store';
+import { t } from '../../lib/i18n';
 
 function Welcome() {
   const characters = useStore((s) => s.characters);
@@ -40,27 +41,27 @@ function Welcome() {
         </div>
         <h1 className="cs-h1">Cream Soda</h1>
         <p className="cs-hint" style={{ maxWidth: 420 }}>
-          Выбери персонажа, чтобы начать историю. Карточки SillyTavern (PNG и JSON), лорбуки и пресеты импортируются как есть.
+          {t('Pick a character to start a story. SillyTavern cards (PNG and JSON), lorebooks and presets import as they are.')}
         </p>
         {!hasConn ? (
           <button type="button" className="cs-btn cs-btn--mint" onClick={() => navigate('settings', 'connections')}>
-            <Icon name="zap" size={16} /> Подключить модель
+            <Icon name="zap" size={16} /> {t('Connect a model')}
           </button>
         ) : null}
         <div className="cs-row cs-row--wrap" style={{ justifyContent: 'center' }}>
           <button type="button" className="cs-btn cs-btn--primary cs-btn--glow" onClick={() => navigate('library')}>
-            <Icon name="chars" size={18} /> Выбрать персонажа
+            <Icon name="chars" size={18} /> {t('Pick a character')}
           </button>
           <button type="button" className="cs-btn" onClick={() => importCharactersInteractive()}>
-            <Icon name="download" size={18} /> Импорт PNG / JSON
+            <Icon name="download" size={18} /> {t('Import PNG / JSON')}
           </button>
           <button type="button" className="cs-btn" onClick={() => navigate('generator')}>
-            <Icon name="sparkle" size={16} /> Сгенерировать
+            <Icon name="sparkle" size={16} /> {t('Generate')}
           </button>
         </div>
         {recent.length ? (
           <div className="cs-col" style={{ width: 'min(520px, 100%)', marginTop: 8 }}>
-            <span className="cs-label">Недавние чаты</span>
+            <span className="cs-label">{t('Recent chats')}</span>
             {recent.map((c) => {
               const o = ownerOf(c);
               return (
@@ -74,7 +75,7 @@ function Welcome() {
                 >
                   <Avatar src={o?.avatar} name={o?.name || '?'} kana={(o as any)?.kana} palette={(o as any)?.palette} size={36} />
                   <span className="cs-grow">
-                    <span className="cs-select-item__title cs-ellipsis">{o?.name || 'Удалённый персонаж'}</span>
+                    <span className="cs-select-item__title cs-ellipsis">{o?.name || t('Deleted character')}</span>
                     <span className="cs-select-item__sub cs-ellipsis">
                       {c.title} · {fmtDate(c.updatedAt)}
                     </span>
@@ -99,21 +100,21 @@ export function ChatPage() {
   const [query, setQuery] = useState('');
   const [drawer, setDrawer] = useState(false);
 
-  // Keep the token counter and «Активный лор» fresh between generations.
+  // Keep the token counter and «Active lore» fresh between generations.
   useEffect(() => {
     if (!hasChat || generating) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       const built = previewPrompt();
       if (!built) return;
       setState({
         contextTokens: built.totalTokens,
         activeLore: [
-          ...built.wi.activated.map((e) => ({ uid: e.uid, title: e.comment, keys: e.constant ? 'всегда' : e.keys.slice(0, 3).join(', '), state: 'active' as const })),
-          ...built.wi.waiting.map((e) => ({ uid: e.uid, title: e.comment, keys: 'ждёт 2-й ключ', state: 'waiting' as const })),
+          ...built.wi.activated.map((e) => ({ uid: e.uid, title: e.comment, keys: e.constant ? t('always') : e.keys.slice(0, 3).join(', '), state: 'active' as const })),
+          ...built.wi.waiting.map((e) => ({ uid: e.uid, title: e.comment, keys: t('waits for the 2nd key'), state: 'waiting' as const })),
         ],
       });
     }, 250);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [hasChat, chatId, messagesLen, presetVersion, generating]);
 
   if (!hasChat) return <Welcome />;
@@ -126,13 +127,13 @@ export function ChatPage() {
           <div className="cs-search-bar">
             <label className="cs-search cs-grow">
               <Icon name="search" size={18} stroke={2} />
-              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Найти в этом чате" aria-label="Найти в чате" onKeyDown={(e) => e.key === 'Escape' && setSearch(false)} />
+              <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('Find in this chat')} aria-label={t('Find in the chat')} onKeyDown={(e) => e.key === 'Escape' && setSearch(false)} />
             </label>
             <SearchNav query={query} />
             <button
               type="button"
               className="cs-icon-btn cs-icon-btn--soft"
-              aria-label="Закрыть поиск"
+              aria-label={t('Close the search')}
               onClick={() => {
                 setSearch(false);
                 setQuery('');
@@ -145,11 +146,11 @@ export function ChatPage() {
         <MessageList highlight={search ? query : ''} />
         <Composer />
       </main>
-      <aside className="cs-chat-aside" aria-label="Контекст сцены">
+      <aside className="cs-chat-aside" aria-label={t('Scene context')}>
         <ContextAside />
       </aside>
       {drawer ? (
-        <Drawer title="Контекст сцены" onClose={() => setDrawer(false)}>
+        <Drawer title={t('Scene context')} onClose={() => setDrawer(false)}>
           <ContextAside />
         </Drawer>
       ) : null}
@@ -173,10 +174,10 @@ function SearchNav({ query }: { query: string }) {
   return (
     <div className="cs-row" style={{ flex: 'none' }}>
       <span className="cs-pill cs-pill--white">{hits.length ? `${pos + 1} / ${hits.length}` : '0'}</span>
-      <button type="button" className="cs-icon-btn cs-icon-btn--soft" aria-label="Предыдущее" onClick={() => go(pos - 1)}>
+      <button type="button" className="cs-icon-btn cs-icon-btn--soft" aria-label={t('Previous')} onClick={() => go(pos - 1)}>
         <Icon name="up" size={16} />
       </button>
-      <button type="button" className="cs-icon-btn cs-icon-btn--soft" aria-label="Следующее" onClick={() => go(pos + 1)}>
+      <button type="button" className="cs-icon-btn cs-icon-btn--soft" aria-label={t('Next')} onClick={() => go(pos + 1)}>
         <Icon name="down" size={16} />
       </button>
     </div>

@@ -4,8 +4,9 @@ import { Modal, openMenu, promptDialog } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { openChat, refreshChatList, startNewChat } from '../../lib/generate';
 import { deleteChat, exportChat, importChatInteractive, renameChat } from '../../lib/appActions';
-import { fmtDate, plural } from '../../lib/utils';
+import { fmtDate } from '../../lib/utils';
 import type { ChatSummary } from '../../lib/types';
+import { t, tn } from '../../lib/i18n';
 
 export function ChatsModal({ onClose, focusBranches }: { onClose: () => void; focusBranches?: boolean }) {
   const chat = useStore((s) => s.chat);
@@ -38,14 +39,14 @@ export function ChatsModal({ onClose, focusBranches }: { onClose: () => void; fo
   const branchesOnly = focusBranches && chat ? shown.filter(({ c }) => c.id === chat.id || c.parentId === chat.id || c.id === chat.parentId || c.parentId === chat.parentId) : shown;
 
   return (
-    <Modal title={focusBranches ? 'Ветки чата' : 'Чаты'} kana="チャット" onClose={onClose} size="wide">
+    <Modal title={focusBranches ? t('Chat branches') : t('Chats')} kana="チャット" onClose={onClose} size="wide">
       <div className="cs-row cs-row--wrap">
         <label className="cs-search cs-grow" style={{ minWidth: 200 }}>
           <Icon name="search" size={18} stroke={2} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Название или последняя реплика" aria-label="Поиск чатов" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Title or last line')} aria-label={t('Search chats')} />
         </label>
         <button type="button" className="cs-btn" onClick={() => importChatInteractive().then(onClose)}>
-          <Icon name="download" size={16} /> Импорт .jsonl
+          <Icon name="download" size={16} /> {t('Import .jsonl')}
         </button>
         <button
           type="button"
@@ -55,7 +56,7 @@ export function ChatsModal({ onClose, focusBranches }: { onClose: () => void; fo
             onClose();
           }}
         >
-          <Icon name="plus" size={16} stroke={2.2} /> Новый чат
+          <Icon name="plus" size={16} stroke={2.2} /> {t('New chat')}
         </button>
       </div>
       <div className="cs-col" style={{ gap: 8 }}>
@@ -73,8 +74,8 @@ export function ChatsModal({ onClose, focusBranches }: { onClose: () => void; fo
             >
               <div style={{ fontWeight: 800, fontSize: 14 }}>{c.title}</div>
               <div className="cs-hint" style={{ fontSize: 12 }}>
-                {fmtDate(c.updatedAt)} · {c.messageCount} {plural(c.messageCount, 'сообщение', 'сообщения', 'сообщений')}
-                {c.branchPoint !== null && c.branchPoint !== undefined ? ` · ветка с #${c.branchPoint + 1}` : ''}
+                {fmtDate(c.updatedAt)} · {c.messageCount} {tn(c.messageCount, 'message|messages')}
+                {c.branchPoint !== null && c.branchPoint !== undefined ? t(' · branch from #{branchPoint}', { branchPoint: c.branchPoint + 1 }) : ''}
               </div>
               {c.preview ? (
                 <div className="cs-ellipsis" style={{ fontSize: 13, marginTop: 2, maxWidth: '100%' }}>
@@ -85,22 +86,22 @@ export function ChatsModal({ onClose, focusBranches }: { onClose: () => void; fo
             <button
               type="button"
               className="cs-icon-btn cs-icon-btn--soft"
-              aria-label="Действия с чатом"
+              aria-label={t('Chat actions')}
               onClick={(e) =>
                 openMenu(e.currentTarget, [
                   {
-                    label: 'Переименовать',
+                    label: t('Rename'),
                     icon: 'edit',
                     onClick: async () => {
-                      const t = await promptDialog('Название чата', { value: c.title });
-                      if (t) renameChat(c.id, t);
+                      const newTitle = await promptDialog(t('Chat title'), { value: c.title });
+                      if (newTitle) renameChat(c.id, newTitle);
                     },
                   },
-                  { label: 'Экспорт · .jsonl (SillyTavern)', icon: 'upload', onClick: () => exportChat(c.id, 'jsonl') },
-                  { label: 'Экспорт · текст', icon: 'upload', onClick: () => exportChat(c.id, 'txt') },
-                  { label: 'Экспорт · JSON Cream Soda', icon: 'upload', onClick: () => exportChat(c.id, 'json') },
+                  { label: t('Export · .jsonl (SillyTavern)'), icon: 'upload', onClick: () => exportChat(c.id, 'jsonl') },
+                  { label: t('Export · text'), icon: 'upload', onClick: () => exportChat(c.id, 'txt') },
+                  { label: t('Export · Cream Soda JSON'), icon: 'upload', onClick: () => exportChat(c.id, 'json') },
                   { separator: true, label: '' },
-                  { label: 'Удалить', icon: 'trash', danger: true, onClick: () => deleteChat(c.id).then(() => refreshChatList()) },
+                  { label: t('Delete'), icon: 'trash', danger: true, onClick: () => deleteChat(c.id).then(() => refreshChatList()) },
                 ])
               }
             >
@@ -108,7 +109,7 @@ export function ChatsModal({ onClose, focusBranches }: { onClose: () => void; fo
             </button>
           </div>
         ))}
-        {!branchesOnly.length ? <p className="cs-hint">Чатов не найдено.</p> : null}
+        {!branchesOnly.length ? <p className="cs-hint">{t('No chats found.')}</p> : null}
       </div>
     </Modal>
   );

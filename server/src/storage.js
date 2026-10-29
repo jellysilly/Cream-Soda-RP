@@ -51,7 +51,7 @@ export async function readJson(file, fallback = null) {
   } catch (err) {
     if (err.code === 'ENOENT') return fallback;
     if (err instanceof SyntaxError) {
-      console.warn(`[storage] повреждённый JSON: ${file}`);
+      console.warn(`[storage] damaged JSON: ${file}`);
       return fallback;
     }
     throw err;
@@ -91,7 +91,7 @@ export class Storage {
   }
 
   collectionDir(name) {
-    if (!COLLECTIONS.has(name)) throw httpError(404, `Неизвестная коллекция: ${name}`);
+    if (!COLLECTIONS.has(name)) throw httpError(404, `Unknown collection: ${name}`);
     return path.join(this.paths.profileDir, name);
   }
 
@@ -110,27 +110,27 @@ export class Storage {
   }
 
   async get(name, id) {
-    if (!isValidId(id)) throw httpError(400, 'Некорректный id');
+    if (!isValidId(id)) throw httpError(400, 'Invalid id');
     const item = await readJson(path.join(this.collectionDir(name), `${id}.json`));
-    if (!item) throw httpError(404, 'Не найдено');
+    if (!item) throw httpError(404, 'Not found');
     return item;
   }
 
   async put(name, id, data) {
-    if (!isValidId(id)) throw httpError(400, 'Некорректный id');
-    if (!data || typeof data !== 'object' || Array.isArray(data)) throw httpError(400, 'Ожидался объект');
+    if (!isValidId(id)) throw httpError(400, 'Invalid id');
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw httpError(400, 'Expected an object');
     const item = { ...data, id };
     await queueWrite(path.join(this.collectionDir(name), `${id}.json`), item);
     return item;
   }
 
   async remove(name, id) {
-    if (!isValidId(id)) throw httpError(400, 'Некорректный id');
+    if (!isValidId(id)) throw httpError(400, 'Invalid id');
     await fsp.rm(path.join(this.collectionDir(name), `${id}.json`), { force: true });
   }
 
   docFile(name) {
-    if (!DOCS.has(name)) throw httpError(404, `Неизвестный документ: ${name}`);
+    if (!DOCS.has(name)) throw httpError(404, `Unknown document: ${name}`);
     return path.join(this.paths.profileDir, `${name}.json`);
   }
 
@@ -139,7 +139,7 @@ export class Storage {
   }
 
   async putDoc(name, data) {
-    if (!data || typeof data !== 'object' || Array.isArray(data)) throw httpError(400, 'Ожидался объект');
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw httpError(400, 'Expected an object');
     await queueWrite(this.docFile(name), data);
     return data;
   }
@@ -150,13 +150,13 @@ export class Storage {
 
   ownerDir(ownerType, ownerId) {
     if (!['character', 'group'].includes(ownerType) || !isValidId(ownerId)) {
-      throw httpError(400, 'Некорректный владелец чата');
+      throw httpError(400, 'Invalid chat owner');
     }
     return path.join(this.paths.chatsDir, `${ownerType}_${ownerId}`);
   }
 
   async findChatFile(chatId) {
-    if (!isValidId(chatId)) throw httpError(400, 'Некорректный id чата');
+    if (!isValidId(chatId)) throw httpError(400, 'Invalid chat id');
     let owners = [];
     try {
       owners = await fsp.readdir(this.paths.chatsDir);
@@ -216,7 +216,7 @@ export class Storage {
       id: chat.id,
       ownerType: chat.ownerType,
       ownerId: chat.ownerId,
-      title: chat.title || 'Без названия',
+      title: chat.title || 'Untitled',
       createdAt: chat.createdAt,
       updatedAt: chat.updatedAt || stat.mtimeMs,
       parentId: chat.parentId || null,
@@ -231,13 +231,13 @@ export class Storage {
 
   async getChat(chatId) {
     const file = await this.findChatFile(chatId);
-    if (!file) throw httpError(404, 'Чат не найден');
+    if (!file) throw httpError(404, 'Chat not found');
     return readJson(file);
   }
 
   async putChat(chatId, chat) {
-    if (!isValidId(chatId)) throw httpError(400, 'Некорректный id чата');
-    if (!chat || !Array.isArray(chat.messages)) throw httpError(400, 'Ожидался чат с массивом messages');
+    if (!isValidId(chatId)) throw httpError(400, 'Invalid chat id');
+    if (!chat || !Array.isArray(chat.messages)) throw httpError(400, 'Expected a chat with a messages array');
     const dir = this.ownerDir(chat.ownerType, chat.ownerId);
     const file = path.join(dir, `${chatId}.json`);
     const existing = await this.findChatFile(chatId);
@@ -260,8 +260,8 @@ export class Storage {
   // ───────── Uploaded files ─────────
 
   async saveUpload(kind, buffer, originalName = '', subdir = '') {
-    if (!UPLOAD_KINDS.has(kind)) throw httpError(400, 'Неизвестный тип файла');
-    if (subdir && !isValidId(subdir)) throw httpError(400, 'Некорректная папка');
+    if (!UPLOAD_KINDS.has(kind)) throw httpError(400, 'Unknown file type');
+    if (subdir && !isValidId(subdir)) throw httpError(400, 'Invalid folder');
     const ext = safeExt(originalName, buffer);
     const name = `${newId()}${ext}`;
     const dir = path.join(this.paths.filesDir, kind, subdir);
@@ -272,8 +272,8 @@ export class Storage {
   }
 
   async listUploads(kind, subdir = '') {
-    if (!UPLOAD_KINDS.has(kind)) throw httpError(400, 'Неизвестный тип файла');
-    if (subdir && !isValidId(subdir)) throw httpError(400, 'Некорректная папка');
+    if (!UPLOAD_KINDS.has(kind)) throw httpError(400, 'Unknown file type');
+    if (subdir && !isValidId(subdir)) throw httpError(400, 'Invalid folder');
     const dir = path.join(this.paths.filesDir, kind, subdir);
     let names = [];
     try {
@@ -304,7 +304,7 @@ export class Storage {
 
   async deleteUpload(url) {
     const full = this.resolveFileUrl(url);
-    if (!full) throw httpError(400, 'Некорректный путь');
+    if (!full) throw httpError(400, 'Invalid path');
     await fsp.rm(full, { force: true });
   }
 }

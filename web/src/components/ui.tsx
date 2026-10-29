@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { create } from 'zustand';
 import { Icon } from './Icon';
 import { paletteFor, toKana } from '../lib/utils';
+import { t } from '../lib/i18n';
 
 // ───────── Switch ─────────
 
@@ -79,7 +80,7 @@ export function RangeField({
           className="cs-range-value"
           value={shown}
           inputMode="decimal"
-          aria-label={typeof label === 'string' ? `${label}: значение` : 'значение'}
+          aria-label={typeof label === 'string' ? t('{label}: value', { label }) : t('value')}
           onFocus={() => setDraft(String(value))}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => {
@@ -226,7 +227,7 @@ export function Modal({
         <div className="cs-modal-head">
           <h2 className="cs-h2">{title}</h2>
           {kana ? <span className="cs-kana" aria-hidden="true">{kana}</span> : null}
-          <button type="button" className="cs-icon-btn cs-icon-btn--soft cs-modal-close cs-ml-auto" aria-label="Закрыть" onClick={onClose}>
+          <button type="button" className="cs-icon-btn cs-icon-btn--soft cs-modal-close cs-ml-auto" aria-label={t('Close')} onClick={onClose}>
             <Icon name="close" size={16} stroke={2.2} />
           </button>
         </div>
@@ -250,7 +251,7 @@ export function Drawer({ onClose, children, title }: { onClose: () => void; chil
       <aside className="cs-drawer" role="dialog" aria-modal="true">
         <div className="cs-row">
           {title ? <h2 className="cs-h2">{title}</h2> : null}
-          <button type="button" className="cs-icon-btn cs-icon-btn--soft cs-ml-auto" aria-label="Закрыть" onClick={onClose}>
+          <button type="button" className="cs-icon-btn cs-icon-btn--soft cs-ml-auto" aria-label={t('Close')} onClick={onClose}>
             <Icon name="close" size={16} stroke={2.2} />
           </button>
         </div>
@@ -296,7 +297,7 @@ export function closeMenu() {
 
 export function confirmDialog(text: string, opts: { title?: string; ok?: string; danger?: boolean } = {}): Promise<boolean> {
   return new Promise((resolve) =>
-    useDialogs.setState({ confirm: { text, title: opts.title || 'Подтвердите', ok: opts.ok || 'Да', danger: opts.danger ?? true, resolve } }),
+    useDialogs.setState({ confirm: { text, title: opts.title || t('Confirm'), ok: opts.ok || t('Yes'), danger: opts.danger ?? true, resolve } }),
   );
 }
 
@@ -399,7 +400,7 @@ export function DialogHost() {
                   useDialogs.setState({ confirm: null });
                 }}
               >
-                Отмена
+                {t('Cancel')}
               </button>
               <button
                 type="button"
@@ -435,7 +436,7 @@ export function DialogHost() {
                   useDialogs.setState({ prompt: null });
                 }}
               >
-                Отмена
+                {t('Cancel')}
               </button>
               <button
                 type="button"
@@ -445,12 +446,12 @@ export function DialogHost() {
                   useDialogs.setState({ prompt: null });
                 }}
               >
-                Готово
+                {t('Done')}
               </button>
             </>
           }
         >
-          <Field label={prompt.label || 'Значение'}>
+          <Field label={prompt.label || t('Value')}>
             {prompt.multiline ? (
               <textarea className="cs-textarea" rows={5} value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
             ) : (
@@ -476,7 +477,7 @@ export function DialogHost() {
 
 // ───────── Tag input ─────────
 
-export function TagInput({ value, onChange, placeholder = '+ ключ', mono = true }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string; mono?: boolean }) {
+export function TagInput({ value, onChange, placeholder = t('+ key'), mono = true }: { value: string[]; onChange: (v: string[]) => void; placeholder?: string; mono?: boolean }) {
   const [draft, setDraft] = useState('');
   const commit = () => {
     const parts = draft
@@ -488,10 +489,10 @@ export function TagInput({ value, onChange, placeholder = '+ ключ', mono = t
   };
   return (
     <div className="cs-chips" style={{ alignItems: 'center' }}>
-      {value.map((t, i) => (
-        <span key={`${t}-${i}`} className="cs-tag" style={mono ? undefined : { fontFamily: 'var(--cs-font-body)' }}>
-          {t}
-          <button type="button" aria-label={`Убрать ${t}`} onClick={() => onChange(value.filter((_, j) => j !== i))}>
+      {value.map((chip, i) => (
+        <span key={`${chip}-${i}`} className="cs-tag" style={mono ? undefined : { fontFamily: 'var(--cs-font-body)' }}>
+          {chip}
+          <button type="button" aria-label={t('Remove {chip}', { chip })} onClick={() => onChange(value.filter((_, j) => j !== i))}>
             ×
           </button>
         </span>
@@ -602,11 +603,11 @@ export function CodeEditor({
           onKeyDown={(e) => {
             if (e.key === 'Tab' && !readOnly) {
               e.preventDefault();
-              const t = e.currentTarget;
-              const s = t.selectionStart;
-              const next = `${value.slice(0, s)}  ${value.slice(t.selectionEnd)}`;
+              const area = e.currentTarget;
+              const s = area.selectionStart;
+              const next = `${value.slice(0, s)}  ${value.slice(area.selectionEnd)}`;
               onChange?.(next);
-              requestAnimationFrame(() => t.setSelectionRange(s + 2, s + 2));
+              requestAnimationFrame(() => area.setSelectionRange(s + 2, s + 2));
             }
           }}
         />

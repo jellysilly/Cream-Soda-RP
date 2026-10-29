@@ -2,23 +2,24 @@ import type { ChatMessage, Lorebook, Role, WISettings, WITimedState, WorldEntry 
 import { parseRegex } from './regex';
 import { escapeRegex } from './utils';
 import { countTokens } from './tokenizer';
+import { t } from './i18n';
 
 export const POSITION_LABELS: Record<number, string> = {
-  0: 'До карточки персонажа',
-  1: 'После карточки персонажа',
-  2: 'Заметка автора · сверху',
-  3: 'Заметка автора · снизу',
-  4: 'На глубине в чате',
-  5: 'Перед примерами диалогов',
-  6: 'После примеров диалогов',
-  7: 'В «розетку» {{outlet::имя}}',
+  0: t('Before the character card'),
+  1: t('After the character card'),
+  2: t("Author's note · top"),
+  3: t("Author's note · bottom"),
+  4: t('At depth in the chat'),
+  5: t('Before dialogue examples'),
+  6: t('After dialogue examples'),
+  7: t('Into an outlet {{outlet::name}}'),
 };
 
 export const LOGIC_LABELS: Record<number, string> = {
-  0: 'И любой из',
-  1: 'НЕ все из',
-  2: 'НИ один из',
-  3: 'И все из',
+  0: t('AND any of'),
+  1: t('NOT all of'),
+  2: t('NONE of'),
+  3: t('AND all of'),
 };
 
 export interface WIEntryRef extends WorldEntry {
@@ -233,9 +234,9 @@ export function scanWorldInfo(o: ScanOptions): WIResult {
   let used = 0;
   for (const e of prioritized) {
     const content = macro(e.content).trim();
-    const t = countTokens(content);
-    if (used + t > budget && kept.length) continue;
-    used += t;
+    const tokens = countTokens(content);
+    if (used + tokens > budget && kept.length) continue;
+    used += tokens;
     kept.push({ e, content });
   }
 

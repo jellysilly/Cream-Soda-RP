@@ -3,6 +3,8 @@ import { getState, setState, setChat, toast, activeCharacter } from './store';
 import { quietGenerate, utilityGenerate, macroEnvFor } from './generate';
 import { substituteMacros } from './macros';
 import { newMessage } from './defaults';
+import { prompt } from './prompts';
+import { t } from './i18n';
 
 export type ImageSource = 'scene' | 'portrait' | 'free';
 
@@ -12,15 +14,15 @@ export async function buildImagePrompt(source: ImageSource): Promise<string> {
   const cfg = s.imageSettings;
   if (source === 'scene') {
     const n = Math.max(1, cfg.sceneMessages || 6);
-    const instruction = `${substituteMacros(cfg.scenePrompt, macroEnvFor())}\n(Учитывай последние ${n} сообщений.)`;
-    return quietGenerate(instruction, { label: 'Картинки · промпт сцены', maxTokens: 200 });
+    const instruction = substituteMacros(prompt('imageScene', { count: n }), macroEnvFor());
+    return quietGenerate(instruction, { label: 'Images · scene prompt', maxTokens: 200 });
   }
   if (source === 'portrait') {
     const env = macroEnvFor();
-    return utilityGenerate('utility', [{ role: 'user', content: substituteMacros(cfg.portraitPrompt, env) }], {
+    return utilityGenerate('utility', [{ role: 'user', content: substituteMacros(prompt('imagePortrait'), env) }], {
       maxTokens: 200,
       temperature: 0.5,
-      label: 'Картинки · промпт портрета',
+      label: 'Images · portrait prompt',
     });
   }
   return '';
@@ -34,13 +36,13 @@ export function styleText(): string {
 export async function generateImages(prompt: string, count?: number): Promise<string[]> {
   const s = getState();
   const cfg = s.imageSettings;
-  if (!cfg.endpoint) throw new Error('Укажите endpoint своего API в разделе «Картинки»');
+  if (!cfg.endpoint) throw new Error(t('Set the endpoint of your API in the Images section'));
   const seed = /^\d+$/.test(String(cfg.seed).trim()) ? Number(cfg.seed) : -1;
   setState({ gen: { kind: 'image', startedAt: Date.now() } });
   try {
     const res = await api.generateImages({
       dir: s.chat?.id,
-      label: 'Картинки · генерация',
+      label: t('Images · generation'),
       params: {
         prompt,
         style: styleText(),
@@ -61,7 +63,7 @@ export async function generateImages(prompt: string, count?: number): Promise<st
   }
 }
 
-/** «Кадр сцены»: prompt from the chat → image → (optionally) inserted into the chat. */
+/** «Scene frame»: prompt from the chat → image → (optionally) inserted into the chat. */
 export async function generateSceneFrame(opts: { insert?: boolean } = {}) {
   const prompt = await buildImagePrompt('scene');
   const [url] = await generateImages(prompt, 1);
@@ -73,9 +75,9 @@ export async function generateSceneFrame(opts: { insert?: boolean } = {}) {
 
 export function insertImageMessage(url: string, caption = '') {
   const c = activeCharacter();
-  const msg = newMessage({ role: 'system', name: 'Кадр сцены', text: caption ? `*${caption.slice(0, 280)}*` : '', image: url });
+  const msg = newMessage({ role: 'system', name: 'Scene frame', text: caption ? `*${caption.slice(0, 280)}*` : '', image: url });
   msg.hidden = true;
   if (c) msg.charId = c.id;
   setChat((chat) => ({ ...chat, messages: [...chat.messages, msg] }));
-  toast('Кадр добавлен в чат (скрыт от модели)');
+  toast(t('Frame added to the chat (hidden from the model)'));
 }

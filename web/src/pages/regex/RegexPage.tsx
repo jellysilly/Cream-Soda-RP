@@ -9,14 +9,15 @@ import { formatMessage } from '../../lib/markdown';
 import { importRegexInteractive, exportRegex } from '../../lib/appActions';
 import { ExtensionsSection } from '../modules/ExtensionsSection';
 import { uid } from '../../lib/utils';
+import { t, tn } from '../../lib/i18n';
 
 type ScopeFilter = 'all' | 'global' | 'character' | 'preset';
 
 function scopeLabel(r: RegexScript, names: { chars: Map<string, string>; presets: Map<string, string> }): string {
-  const kind = r.renderHtml ? 'HTML' : r.markdownOnly ? 'отображение' : r.promptOnly ? 'в промпт' : r.placement.includes(1) && !r.placement.includes(2) ? 'ввод игрока' : 'ответы ИИ';
-  if (r.scope.type === 'character') return `карточка · ${names.chars.get(r.scope.id) || '?'} · ${kind}`;
-  if (r.scope.type === 'preset') return `пресет · ${names.presets.get(r.scope.id) || '?'} · ${kind}`;
-  return `глобальный · ${kind}`;
+  const kind = r.renderHtml ? 'HTML' : r.markdownOnly ? t('display') : r.promptOnly ? t('to the prompt') : r.placement.includes(1) && !r.placement.includes(2) ? t('player input') : t('AI replies');
+  if (r.scope.type === 'character') return t('card · {x} · {kind}', { x: names.chars.get(r.scope.id) || '?', kind });
+  if (r.scope.type === 'preset') return t('preset · {x} · {kind}', { x: names.presets.get(r.scope.id) || '?', kind });
+  return t('global · {kind}', { kind });
 }
 
 export default function RegexPage() {
@@ -39,7 +40,7 @@ export default function RegexPage() {
   const r = regex.find((x) => x.id === sel);
   const set = (patch: Partial<RegexScript>) => r && upsert('regex', { ...r, ...patch });
 
-  const env = useMemo(() => ({ user: activePersona()?.name || 'Юки', char: activeCharacter()?.name || 'Рин' }), []);
+  const env = useMemo(() => ({ user: activePersona()?.name || t('Yuki'), char: activeCharacter()?.name || t('Rin') }), []);
   const test = r?.testInput || '';
   const result = useMemo(() => {
     if (!r) return { html: '', count: 0, error: '' };
@@ -53,10 +54,10 @@ export default function RegexPage() {
 
   return (
     <div className="cs-page">
-      <PageHead title="Регексы и HTML" kana="レシピ" sub="Замены в тексте, отрисовка HTML-блоков в сообщениях и модули">
+      <PageHead title={t('Regexes and HTML')} kana="レシピ" sub={t('Text replacements, rendering of HTML blocks in messages, and modules')}>
         <div className="cs-row cs-row--wrap">
           <button type="button" className="cs-btn" onClick={() => importRegexInteractive()}>
-            Импорт
+            {t('Import')}
           </button>
           <button
             type="button"
@@ -65,33 +66,33 @@ export default function RegexPage() {
               const n = upsert(
                 'regex',
                 newRegex({
-                  name: 'Новый регекс',
+                  name: t('New regex'),
                   scope: charFilter ? { type: 'character', id: charFilter } : { type: 'global' },
                   order: (regex.length + 1) * 10,
-                  findRegex: '/пример/gi',
+                  findRegex: t('/example/gi'),
                   replaceString: '**$0**',
-                  testInput: 'Это пример текста для проверки.',
+                  testInput: t('This is a sample text for testing.'),
                 }),
               );
               setSel(n.id);
             }}
           >
-            Новый регекс
+            {t('New regex')}
           </button>
         </div>
       </PageHead>
 
       <div className="cs-columns">
-        <section aria-label="Скрипты" className="cs-panel" style={{ flex: '1 1 260px', minWidth: 0, gap: 8 }}>
+        <section aria-label={t('Scripts')} className="cs-panel" style={{ flex: '1 1 260px', minWidth: 0, gap: 8 }}>
           <div className="cs-panel-head">
             <h2 className="cs-h2" style={{ fontSize: 17 }}>
-              Скрипты
+              {t('Scripts')}
             </h2>
-            <select className="cs-select cs-select--sm cs-ml-auto" style={{ width: 124 }} value={filter} onChange={(e) => setFilter(e.target.value as ScopeFilter)} aria-label="Фильтр">
-              <option value="all">Все</option>
-              <option value="global">Глобальные</option>
-              <option value="character">Персонажей</option>
-              <option value="preset">Пресетов</option>
+            <select className="cs-select cs-select--sm cs-ml-auto" style={{ width: 124 }} value={filter} onChange={(e) => setFilter(e.target.value as ScopeFilter)} aria-label={t('Filter')}>
+              <option value="all">{t('All')}</option>
+              <option value="global">{t('Global')}</option>
+              <option value="character">{t('Of characters')}</option>
+              <option value="preset">{t('Of presets')}</option>
             </select>
           </div>
           {list.map((x) => (
@@ -103,35 +104,35 @@ export default function RegexPage() {
               </span>
             </button>
           ))}
-          {!list.length ? <Empty icon="regex" title="Скриптов нет" /> : null}
+          {!list.length ? <Empty icon="regex" title={t('No scripts')} /> : null}
           {regex.length ? (
             <button type="button" className="cs-btn cs-btn--sm" onClick={() => exportRegex(list.map((x) => x.id))}>
-              Экспорт списка
+              {t('Export the list')}
             </button>
           ) : null}
         </section>
 
         {r ? (
-          <section aria-label="Редактор" className="cs-panel cs-panel--strong cs-panel--pad-lg" style={{ flex: '999 1 460px', minWidth: 0 }}>
+          <section aria-label={t('Editor')} className="cs-panel cs-panel--strong cs-panel--pad-lg" style={{ flex: '999 1 460px', minWidth: 0 }}>
             <div className="cs-row cs-row--wrap">
-              <input className="cs-input cs-input--title cs-grow" style={{ minWidth: 180 }} value={r.name} onChange={(e) => set({ name: e.target.value })} aria-label="Название" />
-              <Switch checked={!r.disabled} label={r.disabled ? 'Включить' : 'Выключить'} onChange={(v) => set({ disabled: !v })} />
+              <input className="cs-input cs-input--title cs-grow" style={{ minWidth: 180 }} value={r.name} onChange={(e) => set({ name: e.target.value })} aria-label={t('Title')} />
+              <Switch checked={!r.disabled} label={r.disabled ? t('Turn on') : t('Turn off')} onChange={(v) => set({ disabled: !v })} />
               <button
                 type="button"
                 className="cs-icon-btn cs-icon-btn--soft"
-                aria-label="Действия"
+                aria-label={t('Actions')}
                 onClick={(e) =>
                   openMenu(e.currentTarget, [
-                    { label: 'Экспорт', icon: 'upload', onClick: () => exportRegex([r.id]) },
-                    { label: 'Дублировать', icon: 'copy', onClick: () => setSel(upsert('regex', { ...structuredClone(r), id: uid(), name: `${r.name} (копия)` }).id) },
+                    { label: t('Export'), icon: 'upload', onClick: () => exportRegex([r.id]) },
+                    { label: t('Duplicate'), icon: 'copy', onClick: () => setSel(upsert('regex', { ...structuredClone(r), id: uid(), name: t('{name} (copy)', { name: r.name }) }).id) },
                     {
-                      label: 'Удалить',
+                      label: t('Delete'),
                       icon: 'trash',
                       danger: true,
                       onClick: async () => {
-                        if (!(await confirmDialog(`Удалить регекс «${r.name}»?`, { ok: 'Удалить' }))) return;
+                        if (!(await confirmDialog(t('Delete the regex “{name}”?', { name: r.name }), { ok: t('Delete') }))) return;
                         await removeItem('regex', r.id);
-                        toast('Регекс удалён');
+                        toast(t('Regex deleted'));
                         setSel(regex.find((x) => x.id !== r.id)?.id || '');
                       },
                     },
@@ -142,7 +143,7 @@ export default function RegexPage() {
               </button>
             </div>
             <div className="cs-grid-fields">
-              <Field label="Где действует">
+              <Field label={t('Where it applies')}>
                 <select
                   className="cs-select"
                   value={r.scope.type === 'global' ? 'global' : `${r.scope.type}:${r.scope.id}`}
@@ -155,15 +156,15 @@ export default function RegexPage() {
                     }
                   }}
                 >
-                  <option value="global">Глобально</option>
-                  <optgroup label="Персонаж">
+                  <option value="global">{t('Globally')}</option>
+                  <optgroup label={t('Character')}>
                     {characters.map((c) => (
                       <option key={c.id} value={`character:${c.id}`}>
                         {c.name}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="Пресет">
+                  <optgroup label={t('Preset')}>
                     {presets.map((p) => (
                       <option key={p.id} value={`preset:${p.id}`}>
                         {p.name}
@@ -172,20 +173,20 @@ export default function RegexPage() {
                   </optgroup>
                 </select>
               </Field>
-              <Field label="Порядок">
+              <Field label={t('Order')}>
                 <input className="cs-input" type="number" value={r.order} onChange={(e) => set({ order: Number(e.target.value) })} />
               </Field>
             </div>
-            <Field label="Найти" hint={result.error ? <span style={{ color: 'var(--cs-rose-deep)' }}>{result.error}</span> : 'Формат /шаблон/флаги. Например: /\\[status\\|(.+?)\\]/g'}>
+            <Field label={t('Find')} hint={result.error ? <span style={{ color: 'var(--cs-rose-deep)' }}>{result.error}</span> : t('Format /pattern/flags. For example: /\\[status\\|(.+?)\\]/g')}>
               <input className="cs-input cs-input--mono" value={r.findRegex} onChange={(e) => set({ findRegex: e.target.value })} spellCheck={false} />
             </Field>
             <div className="cs-col" style={{ gap: 6 }}>
-              <span className="cs-label">Заменить на{r.renderHtml ? ' · HTML-шаблон' : ''}</span>
-              <CodeEditor value={r.replaceString} lang={r.renderHtml ? 'html' : 'text'} minHeight={120} onChange={(replaceString) => set({ replaceString })} label="Замена" />
-              <span className="cs-hint">$1, $2… — группы; {'{{match}}'} — всё совпадение; макросы {'{{char}}'}, {'{{user}}'} работают.</span>
+              <span className="cs-label">{t('Replace with')}{r.renderHtml ? t(' · HTML template') : ''}</span>
+              <CodeEditor value={r.replaceString} lang={r.renderHtml ? 'html' : 'text'} minHeight={120} onChange={(replaceString) => set({ replaceString })} label={t('Replacement')} />
+              <span className="cs-hint">{t('$1, $2… are groups; {x} is the whole match; the {x2} and {x3} macros work.', { x: '{{match}}', x2: '{{char}}', x3: '{{user}}' })}</span>
             </div>
             <div className="cs-col" style={{ gap: 6 }}>
-              <span className="cs-label">Применять к</span>
+              <span className="cs-label">{t('Apply to')}</span>
               <div className="cs-chips">
                 {([2, 1, 3, 5, 6] as RegexPlacement[]).map((p) => (
                   <Check key={p} chip checked={r.placement.includes(p)} onChange={() => togglePlacement(p)}>
@@ -195,60 +196,60 @@ export default function RegexPage() {
               </div>
             </div>
             <div className="cs-col" style={{ gap: 6 }}>
-              <span className="cs-label">Как</span>
+              <span className="cs-label">{t('How')}</span>
               <Choices<'store' | 'display' | 'prompt'>
                 small
                 value={r.markdownOnly ? 'display' : r.promptOnly ? 'prompt' : 'store'}
                 onChange={(v) => set({ markdownOnly: v === 'display', promptOnly: v === 'prompt' })}
                 items={[
-                  { id: 'store', label: 'Менять сам текст' },
-                  { id: 'display', label: 'Только отображение' },
-                  { id: 'prompt', label: 'Только в промпт' },
+                  { id: 'store', label: t('Change the text itself') },
+                  { id: 'display', label: t('Display only') },
+                  { id: 'prompt', label: t('Prompt only') },
                 ]}
               />
               <div className="cs-chips">
                 <Check chip checked={r.renderHtml} onChange={(renderHtml) => set({ renderHtml })}>
-                  Рендерить HTML
+                  {t('Render HTML')}
                 </Check>
                 <Check chip checked={r.runOnEdit} onChange={(runOnEdit) => set({ runOnEdit })}>
-                  При правке сообщения
+                  {t('When a message is edited')}
                 </Check>
               </div>
             </div>
             <details className="cs-details">
-              <summary>Дополнительно</summary>
+              <summary>{t('Advanced')}</summary>
               <div className="cs-grid-fields">
-                <Field label="Макросы в «Найти»" honey>
+                <Field label={t('Macros in “Find”')} honey>
                   <select className="cs-select" value={r.substituteRegex} onChange={(e) => set({ substituteRegex: Number(e.target.value) as 0 | 1 | 2 })}>
-                    <option value={0}>Не подставлять</option>
-                    <option value={1}>Подставлять как есть</option>
-                    <option value={2}>Подставлять экранированно</option>
+                    <option value={0}>{t("Don't substitute")}</option>
+                    <option value={1}>{t('Substitute as is')}</option>
+                    <option value={2}>{t('Substitute escaped')}</option>
                   </select>
                 </Field>
-                <Field label="Мин. глубина" honey hint="0 — последнее сообщение">
+                <Field label={t('Min. depth')} honey hint={t('0 is the last message')}>
                   <input className="cs-input" type="number" min={-1} value={r.minDepth ?? ''} onChange={(e) => set({ minDepth: e.target.value === '' ? null : Number(e.target.value) })} />
                 </Field>
-                <Field label="Макс. глубина" honey>
+                <Field label={t('Max. depth')} honey>
                   <input className="cs-input" type="number" min={-1} value={r.maxDepth ?? ''} onChange={(e) => set({ maxDepth: e.target.value === '' ? null : Number(e.target.value) })} />
                 </Field>
               </div>
-              <Field label="Вырезать из групп" honey>
-                <TagInput value={r.trimStrings} onChange={(trimStrings) => set({ trimStrings })} placeholder="+ строка" />
+              <Field label={t('Trim out of groups')} honey>
+                <TagInput value={r.trimStrings} onChange={(trimStrings) => set({ trimStrings })} placeholder={t('+ string')} />
               </Field>
             </details>
             <div className="cs-grid-fields" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
               <div className="cs-col" style={{ gap: 6 }}>
-                <span className="cs-label">Тест · исходный текст</span>
+                <span className="cs-label">{t('Test · source text')}</span>
                 <textarea className="cs-test-src" value={r.testInput} rows={6} onChange={(e) => set({ testInput: e.target.value })} spellCheck={false} />
               </div>
               <div className="cs-col" style={{ gap: 6 }}>
-                <span className="cs-label">Результат в чате</span>
+                <span className="cs-label">{t('Result in the chat')}</span>
                 <div className="cs-result-box">
                   <div className="cs-msg-text" dangerouslySetInnerHTML={{ __html: result.html }} />
                 </div>
                 <span className="cs-row" style={{ gap: 6, fontSize: 12, fontWeight: 700, color: result.count ? 'var(--cs-mint-ink)' : 'var(--cs-muted)' }}>
                   <span className={`cs-dot cs-dot--sm${result.count ? '' : ' cs-dot--off'}`} />
-                  {result.count} {result.count === 1 ? 'совпадение' : 'совпадений'} · HTML в песочнице, скрипты выключены
+                  {t('{count} {x} · HTML in a sandbox, scripts are off', { count: result.count, x: tn(result.count, 'match|matches') })}
                 </span>
               </div>
             </div>

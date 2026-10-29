@@ -2,18 +2,19 @@
 /**
  * A tiny OpenAI-compatible server for trying Cream Soda without a real model.
  *   node scripts/mock-llm.js [--port 5055]
- * Then add a connection «OpenAI-совместимый» with base URL http://127.0.0.1:5055/v1
+ * Then add an «OpenAI-compatible» connection with base URL http://127.0.0.1:5055/v1
  * and any model name. It streams canned roleplay replies, echoes the last user line,
- * and answers summary / variant / JSON requests in the expected shape.
+ * and answers the prompts Cream Soda sends (summary, facts, variants, translation,
+ * image prompts, generator JSON) in the expected shape.
  */
 import http from 'node:http';
 
 const port = Number(process.argv[process.argv.indexOf('--port') + 1]) || 5055;
 
 const REPLIES = [
-  '*Рин ставит перед тобой высокий бокал: голубая газировка, шарик ванильного мороженого и вишенка.* «За счёт заведения. Ты опять пришёл за пять минут до закрытия».\n\n[status|23:40 · ливень|Кафе «Кристалл»|тёплая усталость|62]',
-  '*Она опирается на стойку и смотрит на дождь за витриной.* «В такие ночи мне кажется, что кафе плывёт по городу, как аквариум».',
-  '*Рин замирает с тряпкой в руке, и щёки у неё розовеют ярче неона.* «…Только если ты понесёшь мой фартук. Он мокрый и пахнет карамелью».',
+  '*Rin sets a tall glass in front of you: blue soda, a scoop of vanilla ice cream and a cherry.* "On the house. You came five minutes before closing again."\n\n[status|23:40 · downpour|Crystal Café|warm tiredness|62]',
+  '*She leans on the counter and watches the rain behind the shop window.* "On nights like this the café feels like an aquarium drifting through the city."',
+  '*Rin freezes with a cloth in her hand, her cheeks turning pinker than the neon.* "…Only if you carry my apron. It\'s wet and smells of caramel."',
 ];
 
 function lastUserText(messages = []) {
@@ -26,30 +27,33 @@ function lastUserText(messages = []) {
 
 function replyFor(body) {
   const all = JSON.stringify(body.messages || body.prompt || '');
-  if (/JSON/.test(all) && /персонаж|character/i.test(all)) {
+  if (/valid JSON/.test(all) && /first_mes|"name"|entries/.test(all)) {
     return JSON.stringify({
-      name: 'Сиратама',
+      name: 'Shiratama',
       tagline: 'ghost pastry chef',
-      description: 'Застенчивый призрак кондитера из старой витрины кафе «Кристалл».',
-      personality: 'Говорит загадками и рецептами, обожает клубничный шорткейк.',
-      scenario: 'Поздний вечер, витрина запотевает изнутри.',
-      first_mes: '*Стекло витрины тихо запотевает изнутри.* «Клубника в этом году кислая».',
-      alternate_greetings: ['«Опять дождь… значит, тесто поднимется».', '*На стекле проступает рисунок торта.*'],
-      mes_example: '<START>\n{{user}}: Кто здесь?\n{{char}}: «Всего лишь крошка сахара в витрине».',
-      tags: ['фэнтези', 'уют'],
-      lorebook: [{ title: 'Старая витрина', keys: ['витрина', 'стекло'], content: 'Витрина помнит всех, кто к ней прижимался.' }],
+      description: 'A shy ghost pastry chef who lives in the old display case of the Crystal café.',
+      personality: 'Speaks in riddles and recipes, adores strawberry shortcake.',
+      scenario: 'Late evening, the display glass fogs up from the inside.',
+      first_mes: '*The display glass quietly fogs up from the inside.* "The strawberries are sour this year."',
+      alternate_greetings: ['"Rain again… so the dough will rise."', '*A drawing of a cake appears on the glass.*'],
+      mes_example: '<START>\n{{user}}: Who is there?\n{{char}}: "Only a grain of sugar in the display case."',
+      tags: ['fantasy', 'cozy'],
+      lorebook: [{ title: 'The old display case', keys: ['display case', 'glass'], content: 'The display case remembers everyone who ever leaned against it.' }],
       avatar_prompt: 'ghost pastry chef, pastel, glass display',
     });
   }
-  if (/вариант|variants?/i.test(all) && /###/.test(all)) {
-    return '### 1\n«Договорились. Фартук — мой, а ты держишь вишенку».\n### 2\n*Молча снимаю с крючка её фартук и раскрываю зонт у двери.*\n### 3\n«Карамель? Тогда я точно не отдам его обратно».';
+  if (/###/.test(all) && /options/.test(all)) {
+    return '### 1\n"Deal. The apron is mine, and you hold the cherry."\n### 2\n*Yuki silently takes her apron off the hook and opens the umbrella by the door.*\n### 3\n"Caramel? Then he is definitely not giving it back."';
   }
-  if (/конспект|summar/i.test(all)) {
-    return 'Название: Зонт до станции\nКонспект: Рин согласилась, чтобы Юки проводил её до станции, если он понесёт её мокрый фартук.\nКлючи: станция, зонт, фартук';
+  if (/Memory Book/.test(all) && /Summary:/.test(all)) {
+    return 'Title: An umbrella to the station\nSummary: Rin agreed to let Yuki walk her to the station if he carries her wet apron.\nKeys: station, umbrella, apron';
   }
+  if (/lasting facts/.test(all)) return '- Rin closes the café at midnight\n- Yuki promised to walk Rin to the station';
+  if (/Translate this roleplay message/.test(all)) return '*Рин улыбается.* «За счёт заведения».';
+  if (/prompt for an image generator/.test(all)) return 'anime style, night cafe, neon, rain on the window, girl barista, soft light';
   const user = lastUserText(body.messages);
   const base = REPLIES[Math.floor(Math.random() * REPLIES.length)];
-  return user && user.length < 200 ? `${base}\n\n*(ответ на: ${user.slice(0, 60)})*` : base;
+  return user && user.length < 200 ? `${base}\n\n*(reply to: ${user.slice(0, 60)})*` : base;
 }
 
 function send(res, status, obj) {

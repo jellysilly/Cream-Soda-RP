@@ -1,3 +1,4 @@
+import { prompt } from './prompts';
 import type {
   Character,
   Chat,
@@ -20,18 +21,19 @@ import { buildMemoryText } from './memory';
 import { countTokens, MESSAGE_OVERHEAD } from './tokenizer';
 import { renderInstruct, type PlainMessage } from './instruct';
 import { BUILTIN_INSTRUCT } from './defaults';
+import { t } from './i18n';
 
 export type GenType = 'normal' | 'swipe' | 'continue' | 'impersonate' | 'quiet';
 
 export type Category = 'system' | 'char' | 'lore' | 'memory' | 'history' | 'instructions';
 
 export const CATEGORY_META: Record<Category, { label: string; color: string }> = {
-  system: { label: 'Система', color: '#E8B66C' },
-  char: { label: 'Чар + персона', color: '#FF9DC5' },
-  lore: { label: 'Лор', color: '#B08AE0' },
-  memory: { label: 'Память', color: '#2ED8A6' },
-  history: { label: 'История', color: '#86C6EC' },
-  instructions: { label: 'Инструкции', color: '#D6216A' },
+  system: { label: t('System'), color: '#E8B66C' },
+  char: { label: t('Char + persona'), color: '#FF9DC5' },
+  lore: { label: t('Lore'), color: '#B08AE0' },
+  memory: { label: t('Memory'), color: '#2ED8A6' },
+  history: { label: t('History'), color: '#86C6EC' },
+  instructions: { label: t('Instructions'), color: '#D6216A' },
 };
 
 export type ContentPart = { type: 'text'; text: string } | { type: 'image'; mime: string; data?: string; url?: string };
@@ -127,7 +129,7 @@ function messageText(m: ChatMessage, includeReasoning: boolean, reasoning: Prese
   let text = m.text || '';
   if (includeReasoning && m.reasoning) text = `${reasoning.prefix}\n${m.reasoning}\n${reasoning.suffix}\n${text}`;
   const files = (m.attachments || []).filter((a) => a.kind === 'file' && a.text);
-  for (const f of files) text += `\n\n[Файл «${f.name}»]\n${f.text}`;
+  for (const f of files) text += `\n\n${prompt('attachment', { name: f.name, text: f.text || '' })}`;
   return text;
 }
 
@@ -141,7 +143,7 @@ export function buildPrompt(ctx: BuildContext, opts: BuildOptions): BuiltPrompt 
   // Macros may write variables; the caller persists `vars` after a real generation.
   const vars = { ...(chat.meta.variables || {}) };
   const globalVars = { ...settings.globalVariables };
-  const userName = persona?.name || 'Ты';
+  const userName = persona?.name || 'You';
   const scenarioOverride = chat.meta.scenarioOverride || (isGroup ? ctx.group!.scenario : '') || undefined;
 
   // History to consider.
@@ -373,7 +375,7 @@ export function buildPrompt(ctx: BuildContext, opts: BuildOptions): BuiltPrompt 
     countTokens(prefill) +
     8;
   const budget = contextSize - maxTokens - fixedTokens;
-  if (budget < 0) warnings.push('Обязательная часть промпта не помещается в контекст — уменьшите описание или лорбук');
+  if (budget < 0) warnings.push(t('The required part of the prompt does not fit into the context: shorten the description or the lorebook'));
 
   const included: PromptMessage[] = [];
   let used = 0;
@@ -424,7 +426,7 @@ export function buildPrompt(ctx: BuildContext, opts: BuildOptions): BuiltPrompt 
   const stop = [...preset.samplers.stop];
   let text: string | undefined;
   if (mode === 'text') {
-    const tpl = ctx.instruct.find((t) => t.id === preset.instructId) || BUILTIN_INSTRUCT[0];
+    const tpl = ctx.instruct.find((it) => it.id === preset.instructId) || BUILTIN_INSTRUCT[0];
     const plain: PlainMessage[] = messages.map((m) => ({ role: m.role, content: m.content, name: m.source === 'history' ? m.name : undefined }));
     if (opts.type === 'continue') {
       // Continue in text mode: render without the last assistant turn, then append it raw.

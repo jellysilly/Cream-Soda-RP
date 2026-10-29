@@ -43,12 +43,12 @@ function copy(from, to) {
 }
 
 if (!fs.existsSync(path.join(root, 'web', 'dist', 'index.html'))) {
-  console.error('Нет web/dist — сначала соберите интерфейс: npm run build (в корне проекта)');
+  console.error('No web/dist: build the interface first with npm run build (in the project root)');
   process.exit(1);
 }
 const icon = path.join(root, 'assets', 'brand', 'icon-1024.png');
 if (!fs.existsSync(icon)) {
-  console.error('Нет assets/brand/icon-1024.png — выполните node scripts/icons.mjs в корне проекта');
+  console.error('No assets/brand/icon-1024.png: run node scripts/icons.mjs in the project root');
   process.exit(1);
 }
 
@@ -102,6 +102,6 @@ const pkg = {
 };
 fs.writeFileSync(path.join(stage, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
 
-console.log('[stage] ставлю зависимости сервера…');
+console.log('[stage] installing the server dependencies…');
 execSync('npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-package-lock', { cwd: stage, stdio: 'inherit' });
-console.log(`[stage] готово: ${path.relative(root, stage)} (Electron ${pkg.build.electronVersion})`);
+console.log(`[stage] ready: ${path.relative(root, stage)} (Electron ${pkg.build.electronVersion})`);

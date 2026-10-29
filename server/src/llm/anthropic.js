@@ -108,7 +108,7 @@ export async function* parseStream(res) {
       continue;
     }
     if (json.type === 'error' || ev.event === 'error') {
-      const e = new Error(json.error?.message || 'Ошибка Anthropic');
+      const e = new Error(json.error?.message || 'Anthropic error');
       e.status = 500;
       throw e;
     }

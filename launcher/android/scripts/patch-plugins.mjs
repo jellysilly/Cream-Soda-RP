@@ -23,7 +23,7 @@ const FILES = {
 };
 
 if (!fs.existsSync(javaDir)) {
-  console.log('[plugins] capacitor-nodejs не установлен — пропускаю');
+  console.log('[plugins] capacitor-nodejs is not installed, skipping');
   process.exit(0);
 }
 
@@ -38,14 +38,14 @@ for (const [name, originalSha] of Object.entries(FILES)) {
   if (current === sha(fixed)) continue;
   if (version === SUPPORTED_VERSION && current === originalSha) {
     fs.copyFileSync(fixed, target);
-    console.log(`[plugins] capacitor-nodejs: ${name} заменён исправленной копией`);
+    console.log(`[plugins] capacitor-nodejs: ${name} replaced with the fixed copy`);
   } else {
     console.error(
-      `[plugins] capacitor-nodejs ${version}: ${name} отличается от того, под который написано исправление (${SUPPORTED_VERSION}).\n` +
-        `          Сравните его с native/capacitor-nodejs/${name}, перенесите исправление и обновите версию и хеш в scripts/patch-plugins.mjs.`,
+      `[plugins] capacitor-nodejs ${version}: ${name} differs from the one the fix was written for (${SUPPORTED_VERSION}).\n` +
+        `          Compare it with native/capacitor-nodejs/${name}, port the fix and update the version and hash in scripts/patch-plugins.mjs.`,
     );
     failed = true;
   }
 }
 if (failed) process.exit(1);
-console.log('[plugins] capacitor-nodejs исправлен');
+console.log('[plugins] capacitor-nodejs patched');

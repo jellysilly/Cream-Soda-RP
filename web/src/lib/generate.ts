@@ -22,6 +22,8 @@ import { substituteMacros, type MacroEnv } from './macros';
 import { uid } from './utils';
 import { pendingRange, parseSummary, parseFacts, messagesToTranscript, chapterNumber } from './memory';
 import { countTokens } from './tokenizer';
+import { prompt, LANGUAGE_NAMES } from './prompts';
+import { getLang, locale, t } from './i18n';
 import { emitEvent } from './events';
 
 let controller: AbortController | null = null;
@@ -39,7 +41,7 @@ export function stopGeneration() {
 function requireConnection(task: keyof Settings['profileFor'] = 'chat'): ConnectionProfile {
   const conn = connectionFor(task);
   if (!conn) {
-    toast('Сначала добавьте подключение к модели: Настройки → Подключения', 'warn', 6000);
+    toast(t('Add a model connection first: Settings → Connections'), 'warn', 6000);
     navigate('settings', 'connections');
     throw new Error('no-connection');
   }
@@ -79,7 +81,7 @@ function macroEnvFor(speaker?: Character): MacroEnv {
   const persona = activePersona(s);
   const sp = speaker || activeCharacter(s);
   return {
-    user: persona?.name || 'Ты',
+    user: persona?.name || 'You',
     char: sp?.name || '',
     description: sp?.description,
     personality: sp?.personality,
@@ -126,7 +128,7 @@ export async function openChat(chatId: string) {
     refreshChatList();
     emitEvent('chat_changed', { chatId: chat.id });
   } catch (err) {
-    toastError(err, 'Не удалось открыть чат');
+    toastError(err, t('Could not open the chat'));
   }
 }
 
@@ -154,7 +156,7 @@ export async function refreshChatList() {
 
 export async function startNewChat(ownerType: 'character' | 'group', ownerId: string, opts: { title?: string; plot?: { scenario?: string; firstMessage?: string; id?: string } } = {}) {
   const s = getState();
-  const date = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const date = new Date().toLocaleDateString(locale(), { day: 'numeric', month: 'long' });
   if (ownerType === 'character') {
     const c = s.characters.find((x) => x.id === ownerId);
     if (!c) return;
@@ -162,7 +164,7 @@ export async function startNewChat(ownerType: 'character' | 'group', ownerId: st
     if (opts.plot?.scenario) chat.meta.scenarioOverride = opts.plot.scenario;
     if (opts.plot?.id) chat.meta.plotId = opts.plot.id;
     const persona = activePersona(s);
-    const env: MacroEnv = { user: persona?.name || 'Ты', char: c.name, chatId: chat.id, localVars: chat.meta.variables, globalVars: s.settings.globalVariables };
+    const env: MacroEnv = { user: persona?.name || 'You', char: c.name, chatId: chat.id, localVars: chat.meta.variables, globalVars: s.settings.globalVariables };
     const greetings = opts.plot?.firstMessage ? [opts.plot.firstMessage] : greetingSwipes(c);
     if (greetings.length) {
       const swipes: Swipe[] = greetings.map((g) => ({ text: substituteMacros(g, env), date: Date.now() }));
@@ -180,7 +182,7 @@ export async function startNewChat(ownerType: 'character' | 'group', ownerId: st
       if (!c || g.mutedIds.includes(id)) continue;
       const greetings = greetingSwipes(c, true);
       if (!greetings.length) continue;
-      const env: MacroEnv = { user: persona?.name || 'Ты', char: c.name, chatId: chat.id };
+      const env: MacroEnv = { user: persona?.name || 'You', char: c.name, chatId: chat.id };
       const text = substituteMacros(c.groupGreetings[0] || greetings[0], env);
       chat.messages.push(newMessage({ role: 'char', name: c.name, charId: c.id, text }));
     }
@@ -223,7 +225,7 @@ export async function branchFrom(messageId: string) {
   const branch: Chat = {
     ...structuredClone(chat),
     id: uid(),
-    title: `${chat.title.replace(/ · ветка \d+$/, '')} · ветка ${siblings + 2}`,
+    title: t('{title} · branch {n}', { title: chat.title.replace(/ · (?:branch|ветка) \d+$/, ''), n: siblings + 2 }),
     createdAt: Date.now(),
     updatedAt: Date.now(),
     parentId: chat.id,
@@ -233,7 +235,7 @@ export async function branchFrom(messageId: string) {
   // Memory chapters that reference cut messages stay; they just lose their range.
   await api.putChat(branch);
   await openChat(branch.id);
-  toast(`Создана ветка с сообщения #${idx + 1}`);
+  toast(t('Branch created from message #{idx}', { idx: idx + 1 }));
 }
 
 // ───────── Message editing ─────────
@@ -286,7 +288,7 @@ export function moveMessage(id: string, dir: -1 | 1) {
 export async function sendUserMessage(text: string, attachments: Attachment[] = []) {
   const s = getState();
   if (!s.chat) {
-    toast('Сначала выберите персонажа в Библиотеке', 'warn');
+    toast(t('Pick a character in the Library first'), 'warn');
     return;
   }
   if (isGenerating()) return;
@@ -299,13 +301,13 @@ export async function sendUserMessage(text: string, attachments: Attachment[] = 
   if (trimmed || attachments.length) {
     const persona = activePersona(s);
     const finalText = applyRegex(trimmed, displayRegexScripts(), { placement: PLACEMENT.USER_INPUT, env: macroEnvFor() });
-    const msg = newMessage({ role: 'user', name: persona?.name || 'Ты', personaId: persona?.id, text: finalText, attachments: attachments.length ? attachments : undefined });
+    const msg = newMessage({ role: 'user', name: persona?.name || 'You', personaId: persona?.id, text: finalText, attachments: attachments.length ? attachments : undefined });
     setChat((c) => ({ ...c, messages: [...c.messages, msg] }));
     emitEvent('message_sent', { messageId: msg.id });
     runQuickReplyAutos('user');
   } else if (activePreset(s).utility.sendIfEmpty?.trim()) {
     const persona = activePersona(s);
-    const msg = newMessage({ role: 'user', name: persona?.name || 'Ты', text: substituteMacros(activePreset(s).utility.sendIfEmpty, macroEnvFor()) });
+    const msg = newMessage({ role: 'user', name: persona?.name || 'You', text: substituteMacros(activePreset(s).utility.sendIfEmpty, macroEnvFor()) });
     setChat((c) => ({ ...c, messages: [...c.messages, msg] }));
   }
   setState({ impersonateVariants: [] });
@@ -457,7 +459,7 @@ async function generateInto(o: GenerateIntoOptions): Promise<boolean> {
   }
   const ctx = buildContext(o.speaker, conn);
   if (!ctx) {
-    toast('Нет активного персонажа', 'warn');
+    toast(t('No active character'), 'warn');
     return false;
   }
   const chat = ctx.chat;
@@ -495,8 +497,8 @@ async function generateInto(o: GenerateIntoOptions): Promise<boolean> {
     lastPrompt: { messages: built.messages.map((m) => ({ role: m.role, content: m.content })), tokens: built.totalTokens, breakdown: built.breakdown },
     contextTokens: built.totalTokens,
     activeLore: [
-      ...built.wi.activated.map((e) => ({ uid: e.uid, title: e.comment, keys: e.constant ? 'всегда' : e.keys.slice(0, 3).join(', '), state: 'active' as const })),
-      ...built.wi.waiting.map((e) => ({ uid: e.uid, title: e.comment, keys: 'ждёт 2-й ключ', state: 'waiting' as const })),
+      ...built.wi.activated.map((e) => ({ uid: e.uid, title: e.comment, keys: e.constant ? t('always') : e.keys.slice(0, 3).join(', '), state: 'active' as const })),
+      ...built.wi.waiting.map((e) => ({ uid: e.uid, title: e.comment, keys: t('waits for the 2nd key'), state: 'waiting' as const })),
     ],
   });
   emitEvent('generation_started', { type: o.type, messageId });
@@ -551,7 +553,7 @@ async function generateInto(o: GenerateIntoOptions): Promise<boolean> {
   };
 
   try {
-    const body = await requestBody(conn, built, preset, `${o.type === 'swipe' ? 'Свайп' : o.type === 'continue' ? 'Продолжение' : 'Чат'} · ответ ${speaker.name}`);
+    const body = await requestBody(conn, built, preset, t('{x} · reply from {name}', { x: o.type === 'swipe' ? t('Swipe') : o.type === 'continue' ? t('Continuation') : t('Chat'), name: speaker.name }));
     if (preset.samplers.stream) {
       for await (const ev of streamGenerate(body, controller.signal)) {
         if (ev.t === 'delta') {
@@ -562,7 +564,7 @@ async function generateInto(o: GenerateIntoOptions): Promise<boolean> {
         } else if (ev.t === 'done') {
           finish = ev.finish || '';
           usage = ev.usage;
-        } else if (ev.t === 'error') throw new Error(ev.message || 'Ошибка генерации');
+        } else if (ev.t === 'error') throw new Error(ev.message || t('Generation error'));
       }
     } else {
       const r = await generateOnce(body, controller.signal);
@@ -573,7 +575,7 @@ async function generateInto(o: GenerateIntoOptions): Promise<boolean> {
   } catch (err) {
     if ((err as Error).name !== 'AbortError') {
       failed = true;
-      toastError(err, 'Ошибка генерации');
+      toastError(err, t('Generation error'));
     }
   } finally {
     if (raf) cancelAnimationFrame(raf);
@@ -681,12 +683,12 @@ export async function utilityGenerate(
   let prompt: string | undefined;
   if (isText) {
     const { renderInstruct } = await import('./instruct');
-    const tpl = getState().instruct.find((t) => t.id === preset.instructId) || getState().instruct[0];
+    const tpl = getState().instruct.find((it) => it.id === preset.instructId) || getState().instruct[0];
     const r = renderInstruct(messages, tpl, { nextName: '', userName: '' });
     prompt = r.prompt;
     params.stop = r.stop.filter((x) => !x.startsWith('\n'));
   }
-  const body = { connectionId: conn.id, label: opts.label || 'Служебный запрос', mode: isText ? 'text' : 'chat', messages: isText ? undefined : messages, prompt, params };
+  const body = { connectionId: conn.id, label: opts.label || t('Utility request'), mode: isText ? 'text' : 'chat', messages: isText ? undefined : messages, prompt, params };
   if (opts.onDelta) {
     let text = '';
     for await (const ev of streamGenerate(body, opts.signal || new AbortController().signal)) {
@@ -705,10 +707,10 @@ export async function utilityGenerate(
 export async function quietGenerate(instruction: string, opts: { label?: string; task?: keyof Settings['profileFor']; maxTokens?: number } = {}): Promise<string> {
   const conn = requireConnection(opts.task || 'utility');
   const ctx = buildContext(undefined, conn);
-  if (!ctx) throw new Error('Нет активного чата');
+  if (!ctx) throw new Error(t('No active chat'));
   const built = buildPrompt(ctx, { type: 'quiet', quietPrompt: instruction, dryRun: true });
   const preset = ctx.preset;
-  const body = await requestBody(conn, { ...built, messages: built.messages.filter((m) => m.source !== 'prefill') }, preset, opts.label || 'Тихая генерация');
+  const body = await requestBody(conn, { ...built, messages: built.messages.filter((m) => m.source !== 'prefill') }, preset, opts.label || t('Quiet generation'));
   if (opts.maxTokens) (body.params as any).max_tokens = opts.maxTokens;
   const r = await generateOnce(body);
   let text = r.text;
@@ -746,17 +748,16 @@ export async function impersonate(mode = getState().settings.impersonate.mode) {
   const imp = s.settings.impersonate;
   const draft = s.composerDraft;
   const direction = imp.direction.trim();
-  const env = { count: String(imp.count), input: draft };
-  let instruction = imp.prompts[mode] || '';
-  instruction = instruction.replace(/\{\{count\}\}/g, env.count).replace(/\{\{input\}\}/g, draft);
-  if (direction) instruction += `\nНаправление: ${direction}`;
+  const key = ({ continue: 'impersonateContinue', variants: 'impersonateVariants', action: 'impersonateAction', voice: 'impersonateVoice' } as const)[mode];
+  let instruction = prompt(key, { count: imp.count, input: draft });
+  if (direction) instruction += `\n${prompt('impersonateDirection', { direction })}`;
 
   const built = buildPrompt(ctx, { type: 'impersonate', finalInstruction: instruction, pendingInput: draft });
   controller = new AbortController();
   setState({ gen: { kind: 'impersonate', startedAt: Date.now() }, streamText: '', impersonateVariants: mode === 'continue' ? [] : s.impersonateVariants });
   let text = '';
   try {
-    const body = await requestBody(conn, built, ctx.preset, mode === 'continue' ? 'Impersonate+ · продолжение' : `Impersonate+ · ${imp.count} варианта`);
+    const body = await requestBody(conn, built, ctx.preset, mode === 'continue' ? 'Impersonate+ · continue' : `Impersonate+ · ${imp.count} variants`);
     for await (const ev of streamGenerate(body, controller.signal)) {
       if (ev.t === 'delta') {
         text += ev.text || '';
@@ -789,19 +790,19 @@ export async function summarizeChapter(range?: { start: number; end: number }, c
   const start = range ? range.start : pend.start;
   const end = range ? range.end : chat.messages.length - 1;
   if (end < start) {
-    toast('Нечего сжимать: в новой главе ещё нет сообщений', 'warn');
+    toast(t('Nothing to condense: the new chapter has no messages yet'), 'warn');
     return;
   }
   const slice = chat.messages.slice(start, end + 1);
   const chunk = messagesToTranscript(slice);
   const persona = activePersona(s);
-  const env: MacroEnv = { user: persona?.name || 'Ты', char: activeCharacter(s)?.name || '' };
+  const env: MacroEnv = { user: persona?.name || 'You', char: activeCharacter(s)?.name || '' };
   setState({ gen: { kind: 'memory', startedAt: Date.now() } });
   try {
     const answer = await utilityGenerate(
       'memory',
-      [{ role: 'user', content: substituteMacros(settings.summaryPrompt.replace('{{chunk}}', chunk), env) }],
-      { maxTokens: 500, temperature: 0.4, label: `Memory · сжатие главы ${chapterNumber(chat.meta.memory)}` },
+      [{ role: 'user', content: substituteMacros(prompt('memorySummary', { chunk }), env) }],
+      { maxTokens: 500, temperature: 0.4, label: `Memory · chapter ${chapterNumber(chat.meta.memory)}` },
     );
     const parsed = parseSummary(answer);
     const chapter = {
@@ -824,8 +825,8 @@ export async function summarizeChapter(range?: { start: number; end: number }, c
       const known = getState().chat?.meta.memory.facts.map((f) => `- ${f.text}`).join('\n') || '—';
       const factsAnswer = await utilityGenerate(
         'memory',
-        [{ role: 'user', content: substituteMacros(settings.factsPrompt.replace('{{chunk}}', chunk).replace('{{facts}}', known), env) }],
-        { maxTokens: 300, temperature: 0.3, label: 'Memory · новые факты' },
+        [{ role: 'user', content: substituteMacros(prompt('memoryFacts', { chunk, facts: known }), env) }],
+        { maxTokens: 300, temperature: 0.3, label: 'Memory · facts' },
       ).catch(() => '');
       const facts = parseFacts(factsAnswer);
       if (facts.length) {
@@ -833,11 +834,11 @@ export async function summarizeChapter(range?: { start: number; end: number }, c
           ...c,
           meta: { ...c.meta, memory: { ...c.meta.memory, facts: [...c.meta.memory.facts, ...facts.map((text) => ({ id: uid(), text, enabled: false }))] } },
         }));
-        toast(`Memory Book предлагает ${facts.length} факт(а) — включите нужные`);
+        toast(t('The Memory Book suggests {n} fact(s): turn on the ones you want', { n: facts.length }));
       }
     }
     await saveChatImmediately();
-    toast(`Глава «${parsed.title}» записана в Memory Book`);
+    toast(t('Chapter “{title}” written to the Memory Book', { title: parsed.title }));
   } finally {
     setState({ gen: { kind: null } });
   }
@@ -849,17 +850,12 @@ export async function translateMessage(messageId: string) {
   const s = getState();
   const msg = s.chat?.messages.find((m) => m.id === messageId);
   if (!msg) return;
-  const target = s.settings.extensions.translate.target || 'ru';
-  const langName: Record<string, string> = { ru: 'русский', en: 'английский', ja: 'японский', uk: 'украинский', de: 'немецкий', fr: 'французский', es: 'испанский', zh: 'китайский', ko: 'корейский' };
+  // No target set: translate into the interface language.
+  const target = s.settings.extensions.translate.target || getLang();
   const text = await utilityGenerate(
     'utility',
-    [
-      {
-        role: 'user',
-        content: `Переведи текст ролевого сообщения на ${langName[target] || target} язык. Сохрани разметку (*курсив*, «кавычки», HTML-теги) и стиль. Верни только перевод.\n\n${msg.text}`,
-      },
-    ],
-    { maxTokens: Math.max(400, countTokens(msg.text) * 2), temperature: 0.2, label: 'Переводчик чата' },
+    [{ role: 'user', content: prompt('translate', { language: LANGUAGE_NAMES[target] || target, text: msg.text }) }],
+    { maxTokens: Math.max(400, countTokens(msg.text) * 2), temperature: 0.2, label: 'Translation' },
   );
   updateMessage(messageId, { translation: text });
 }

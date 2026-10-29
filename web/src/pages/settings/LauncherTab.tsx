@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
 import type { SystemInfo } from '../../lib/types';
 import { copyText, fmtTime } from '../../lib/utils';
+import { t } from '../../lib/i18n';
 
 export function LauncherTab() {
   const version = useStore((s) => s.version);
@@ -23,7 +24,7 @@ export function LauncherTab() {
         <div className="cs-row">
           <span className="cs-pill cs-pill--mint cs-pill--lg">
             <span className="cs-dot cs-dot--sm" />
-            Сервер работает
+            {t('Server is running')}
           </span>
           <span className="cs-mono cs-ml-auto" style={{ fontSize: 12, color: 'var(--cs-muted)' }}>
             v{version}
@@ -31,7 +32,7 @@ export function LauncherTab() {
         </div>
         <div className="cs-row" style={{ gap: 12, alignItems: 'center', padding: 12, borderRadius: 20, background: 'var(--cs-surface-row)' }}>
           {info?.lan.qr ? (
-            <div className="cs-qr" aria-label="QR-код для телефона" dangerouslySetInnerHTML={{ __html: info.lan.qr }} />
+            <div className="cs-qr" aria-label={t('QR code for the phone')} dangerouslySetInnerHTML={{ __html: info.lan.qr }} />
           ) : (
             <div className="cs-qr" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cs-faint)' }}>
               <Icon name="qr" size={40} />
@@ -39,7 +40,7 @@ export function LauncherTab() {
           )}
           <div className="cs-grow cs-col" style={{ gap: 4 }}>
             <label className="cs-check cs-check--row" style={{ fontWeight: 800 }}>
-              Открыть с телефона
+              {t('Open from a phone')}
               <input
                 type="checkbox"
                 checked={!!info?.lan.enabled}
@@ -59,49 +60,49 @@ export function LauncherTab() {
               />
             </label>
             <span className="cs-mono" style={{ fontSize: 12, color: 'var(--cs-muted)' }}>
-              {info?.lan.display || 'нет сети'}
+              {info?.lan.display || t('no network')}
             </span>
-            <span style={{ fontSize: 12, color: 'var(--cs-muted)' }}>{info?.lan.enabled ? 'Отсканируй QR-код в той же Wi-Fi сети' : 'Включи, чтобы зайти с телефона в той же Wi-Fi сети'}</span>
+            <span style={{ fontSize: 12, color: 'var(--cs-muted)' }}>{info?.lan.enabled ? t('Scan the QR code on the same Wi-Fi network') : t('Turn on to open it from a phone on the same Wi-Fi network')}</span>
             {info?.lan.enabled && info.lan.url ? (
-              <button type="button" className="cs-btn cs-btn--xs" style={{ alignSelf: 'flex-start' }} onClick={() => copyText(info.lan.url).then(() => toast('Ссылка скопирована'))}>
-                <Icon name="copy" size={14} /> Скопировать ссылку
+              <button type="button" className="cs-btn cs-btn--xs" style={{ alignSelf: 'flex-start' }} onClick={() => copyText(info.lan.url).then(() => toast(t('Link copied')))}>
+                <Icon name="copy" size={14} /> {t('Copy the link')}
               </button>
             ) : null}
           </div>
         </div>
         <div className="cs-col" style={{ gap: 4, fontSize: 13 }}>
           <div>
-            Профиль данных: <b>{info?.profile}</b>
-            {info && info.profiles.length > 1 ? <span className="cs-muted"> · есть ещё: {info.profiles.filter((p) => p !== info.profile).join(', ')}</span> : null}
+            {t('Data profile:')} <b>{info?.profile}</b>
+            {info && info.profiles.length > 1 ? <span className="cs-muted"> {t('· also:')} {info.profiles.filter((p) => p !== info.profile).join(', ')}</span> : null}
           </div>
           <div>
-            Порт: <b>{info?.port}</b> · {info?.host === '0.0.0.0' ? 'слушает сеть' : 'только этот компьютер'}
+            {t('Port:')} <b>{info?.port}</b> · {info?.host === '0.0.0.0' ? t('listening on the network') : t('this computer only')}
           </div>
           {info?.dataRoot ? (
             <div className="cs-ellipsis">
-              Данные: <code className="cs-mono" style={{ fontSize: 12 }}>{info.dataRoot}</code>
+              {t('Data:')} <code className="cs-mono" style={{ fontSize: 12 }}>{info.dataRoot}</code>
             </div>
           ) : null}
-          {info?.launcher ? <div>Лаунчер: {info.launcher.kind}</div> : <div className="cs-muted">Запущено без лаунчера (npm start).</div>}
+          {info?.launcher ? <div>{t('Launcher:')} {info.launcher.kind}</div> : <div className="cs-muted">{t('Started without the launcher (npm start).')}</div>}
         </div>
-        <p className="cs-hint">Профили данных, обновление и запуск в отдельном окне — в лаунчере Cream Soda. Сменить профиль можно при запуске: <code className="cs-mono">npm start -- --profile Тестовый</code>.</p>
+        <p className="cs-hint">{t('Data profiles, updates and running in a separate window are in the Cream Soda launcher. You can switch the profile at startup:')} <code className="cs-mono">{t('npm start -- --profile Test')}</code>.</p>
       </section>
       <section className="cs-panel cs-panel--pad-lg" style={{ flex: '1 1 420px', minWidth: 0 }}>
         <div className="cs-row">
           <h2 className="cs-h2" style={{ fontSize: 17 }}>
-            Логи сервера
+            {t('Server logs')}
           </h2>
           <Kana>ログ</Kana>
           <button type="button" className="cs-btn cs-btn--sm cs-ml-auto" disabled={!isLocal} onClick={() => api.logs().then(setLogs).catch((e) => toastError(e))}>
-            {logs ? 'Обновить' : 'Показать'}
+            {logs ? t('Refresh') : t('Show')}
           </button>
         </div>
         {logs ? (
           <pre className="cs-logs">
-            {logs.length ? logs.map((l) => `${fmtTime(l.time)} ${l.level === 'error' ? '✖' : l.level === 'warn' ? '!' : '·'} ${l.text}`).join('\n') : 'Пусто'}
+            {logs.length ? logs.map((l) => `${fmtTime(l.time)} ${l.level === 'error' ? '✖' : l.level === 'warn' ? '!' : '·'} ${l.text}`).join('\n') : t('Empty')}
           </pre>
         ) : (
-          <p className="cs-hint">Здесь видно, что делает сервер: запросы к моделям, бэкапы, ошибки.</p>
+          <p className="cs-hint">{t('This shows what the server does: model requests, backups, errors.')}</p>
         )}
       </section>
     </div>

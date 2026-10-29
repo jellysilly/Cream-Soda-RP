@@ -56,7 +56,7 @@ export async function qrSvg(text) {
 let consoleHooked = false;
 let activeCapture = null;
 
-/** Captures console output into a ring buffer + log file (for «Логи» in the launcher). */
+/** Captures console output into a ring buffer + log file (for «Logs» in the launcher). */
 export class LogCapture {
   constructor(logsDir, limit = 800) {
     this.lines = [];

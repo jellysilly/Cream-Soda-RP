@@ -7,49 +7,50 @@ import type { Preset, PromptBlock, Role, Samplers, InstructTemplate } from '../.
 import { previewPrompt, requireConnection } from '../../lib/generate';
 import { CATEGORY_META, samplersToParams, toWireMessages, type Category, type BuiltPrompt } from '../../lib/promptBuilder';
 import { exportPreset, importPresetsInteractive } from '../../lib/appActions';
-import { fmtNum, moveItem, uid, copyText, plural } from '../../lib/utils';
+import { fmtNum, moveItem, uid, copyText } from '../../lib/utils';
 import { generateOnce } from '../../lib/api';
 import { MACRO_HELP } from '../../lib/macros';
 import { useTokenizer } from '../../lib/tokenizer';
+import { t, tn } from '../../lib/i18n';
 
-const ROLE_LABEL: Record<string, string> = { system: 'SYSTEM', user: 'USER', assistant: 'ASSIST.', history: 'ИСТОРИЯ' };
+const ROLE_LABEL: Record<string, string> = { system: 'SYSTEM', user: 'USER', assistant: 'ASSIST.', history: t('HISTORY') };
 
 function whereLabel(b: PromptBlock, idx: number, blocks: PromptBlock[], built: BuiltPrompt | null): string {
   const histIdx = blocks.findIndex((x) => x.marker === 'chatHistory');
-  if (b.marker === 'chatHistory') return built ? `последние ${built.historyIncluded} ${plural(built.historyIncluded, 'сообщение', 'сообщения', 'сообщений')}` : 'сообщения чата';
+  if (b.marker === 'chatHistory') return built ? t('last {historyIncluded} {x}', { historyIncluded: built.historyIncluded, x: tn(built.historyIncluded, 'message|messages') }) : t('chat messages');
   if (b.marker === 'worldInfoBefore' || b.marker === 'worldInfoAfter') {
     const n = built?.wi.activated.filter((e) => e.position === (b.marker === 'worldInfoBefore' ? 0 : 1)).length ?? 0;
-    return built ? `${n} ${plural(n, 'запись сработала', 'записи сработали', 'записей сработало')}` : MARKER_LABELS[b.marker];
+    return built ? `${n} ${tn(n, 'entry triggered|entries triggered')}` : MARKER_LABELS[b.marker];
   }
   if (b.marker === 'memoryBook') {
     const chat = getState().chat;
     const ch = chat?.meta.memory.chapters.filter((c) => c.status === 'memory').length ?? 0;
     const f = chat?.meta.memory.facts.filter((x) => x.enabled).length ?? 0;
-    return chat ? `${ch} ${plural(ch, 'глава', 'главы', 'глав')} + ${f} ${plural(f, 'факт', 'факта', 'фактов')}` : MARKER_LABELS.memoryBook;
+    return chat ? `${ch} ${tn(ch, 'chapter|chapters')} + ${f} ${tn(f, 'fact|facts')}` : MARKER_LABELS.memoryBook;
   }
-  if (b.marker) return MARKER_LABELS[b.marker] || 'маркер';
-  if (b.id === 'prefill') return 'после всего';
-  if (b.position === 'depth') return `на глубине ${b.depth}`;
-  if (idx === 0) return 'в начале';
-  if (histIdx !== -1 && idx > histIdx) return 'в конце';
-  return 'перед историей';
+  if (b.marker) return MARKER_LABELS[b.marker] || t('marker');
+  if (b.id === 'prefill') return t('after everything');
+  if (b.position === 'depth') return t('at depth {depth}', { depth: b.depth });
+  if (idx === 0) return t('at the start');
+  if (histIdx !== -1 && idx > histIdx) return t('at the end');
+  return t('before the history');
 }
 
 function BlockEditor({ block, onSave, onDelete, onClose }: { block: PromptBlock; onSave: (b: PromptBlock) => void; onDelete?: () => void; onClose: () => void }) {
   const [b, setB] = useState(block);
   return (
     <Modal
-      title={b.name || 'Блок'}
+      title={b.name ? t(b.name) : t('Block')}
       onClose={onClose}
       footer={
         <>
           {onDelete ? (
             <button type="button" className="cs-btn cs-btn--danger" style={{ marginRight: 'auto' }} onClick={onDelete}>
-              Удалить блок
+              {t('Delete the block')}
             </button>
           ) : null}
           <button type="button" className="cs-btn" onClick={onClose}>
-            Отмена
+            {t('Cancel')}
           </button>
           <button
             type="button"
@@ -59,16 +60,16 @@ function BlockEditor({ block, onSave, onDelete, onClose }: { block: PromptBlock;
               onClose();
             }}
           >
-            Сохранить
+            {t('Save')}
           </button>
         </>
       }
     >
       <div className="cs-grid-fields">
-        <Field label="Название">
+        <Field label={t('Title')}>
           <input className="cs-input" value={b.name} onChange={(e) => setB({ ...b, name: e.target.value })} />
         </Field>
-        <Field label="Роль">
+        <Field label={t('Role')}>
           <select className="cs-select" value={b.role} onChange={(e) => setB({ ...b, role: e.target.value as Role })}>
             <option value="system">system</option>
             <option value="user">user</option>
@@ -76,19 +77,19 @@ function BlockEditor({ block, onSave, onDelete, onClose }: { block: PromptBlock;
           </select>
         </Field>
         {!b.marker && b.id !== 'prefill' ? (
-          <Field label="Размещение">
+          <Field label={t('Placement')}>
             <select className="cs-select" value={b.position} onChange={(e) => setB({ ...b, position: e.target.value as PromptBlock['position'] })}>
-              <option value="relative">По порядку блоков</option>
-              <option value="depth">В историю, на глубину</option>
+              <option value="relative">{t('In block order')}</option>
+              <option value="depth">{t('Into the history, at depth')}</option>
             </select>
           </Field>
         ) : null}
         {b.position === 'depth' && !b.marker ? (
           <>
-            <Field label="Глубина">
+            <Field label={t('Depth')}>
               <input className="cs-input" type="number" min={0} value={b.depth} onChange={(e) => setB({ ...b, depth: Math.max(0, Number(e.target.value)) })} />
             </Field>
-            <Field label="Порядок на глубине">
+            <Field label={t('Order at depth')}>
               <input className="cs-input" type="number" value={b.order} onChange={(e) => setB({ ...b, order: Number(e.target.value) })} />
             </Field>
           </>
@@ -96,15 +97,15 @@ function BlockEditor({ block, onSave, onDelete, onClose }: { block: PromptBlock;
       </div>
       {b.marker ? (
         <p className="cs-hint">
-          Это маркер: его содержимое подставляется автоматически ({MARKER_LABELS[b.marker]}). Здесь можно поменять порядок, роль и название.
+          {t('This is a marker: its content is filled in automatically ({MARKER_LABELS}). Here you can change its order, role and name.', { MARKER_LABELS: MARKER_LABELS[b.marker] })}
         </p>
       ) : (
         <>
-          <Field label={b.id === 'prefill' ? 'Начало ответа модели' : 'Текст блока'}>
+          <Field label={b.id === 'prefill' ? t("Start of the model's reply") : t('Block text')}>
             <textarea className="cs-textarea cs-textarea--lg" rows={9} value={b.content} onChange={(e) => setB({ ...b, content: e.target.value })} />
           </Field>
           <details className="cs-details">
-            <summary>Макросы</summary>
+            <summary>{t('Macros')}</summary>
             <div className="cs-col" style={{ gap: 4 }}>
               {MACRO_HELP.map((m) => (
                 <div key={m.name} style={{ fontSize: 13 }}>
@@ -131,41 +132,41 @@ function SamplersPanel({ p, set }: { p: Preset; set: (patch: Partial<Preset>) =>
   return (
     <>
       <div className="cs-samplers">
-        <RangeField label="Температура" value={s.temperature} min={0} max={2} step={0.05} onChange={(temperature) => ss({ temperature })} />
+        <RangeField label={t('Temperature')} value={s.temperature} min={0} max={2} step={0.05} onChange={(temperature) => ss({ temperature })} />
         <RangeField label="Top P" value={s.topP} min={0} max={1} step={0.01} onChange={(topP) => ss({ topP })} />
-        <RangeField label="Штраф за повтор" value={s.repetitionPenalty} min={1} max={2} step={0.01} onChange={(repetitionPenalty) => ss({ repetitionPenalty })} />
-        <RangeField label="Длина ответа" value={s.maxTokens} min={50} max={8000} step={10} onChange={(maxTokens) => ss({ maxTokens })} format={(v) => fmtNum(v)} />
-        <RangeField label="Контекст" value={s.contextSize} min={2048} max={262144} step={1024} onChange={(contextSize) => ss({ contextSize })} format={(v) => fmtNum(v)} />
+        <RangeField label={t('Repetition penalty')} value={s.repetitionPenalty} min={1} max={2} step={0.01} onChange={(repetitionPenalty) => ss({ repetitionPenalty })} />
+        <RangeField label={t('Response length')} value={s.maxTokens} min={50} max={8000} step={10} onChange={(maxTokens) => ss({ maxTokens })} format={(v) => fmtNum(v)} />
+        <RangeField label={t('Context')} value={s.contextSize} min={2048} max={262144} step={1024} onChange={(contextSize) => ss({ contextSize })} format={(v) => fmtNum(v)} />
         <Check checked={s.stream} onChange={(stream) => ss({ stream })}>
-          Стриминг ответа
+          {t('Stream the reply')}
         </Check>
       </div>
       <details className="cs-details">
-        <summary>Ещё сэмплеры</summary>
+        <summary>{t('More samplers')}</summary>
         <div className="cs-samplers" style={{ padding: 0, background: 'transparent' }}>
-          <RangeField label="Top K (0 — выкл.)" value={s.topK} min={0} max={200} onChange={(topK) => ss({ topK })} />
+          <RangeField label={t('Top K (0 means off)')} value={s.topK} min={0} max={200} onChange={(topK) => ss({ topK })} />
           <RangeField label="Min P" value={s.minP} min={0} max={1} step={0.01} onChange={(minP) => ss({ minP })} />
           <RangeField label="Top A" value={s.topA} min={0} max={1} step={0.01} onChange={(topA) => ss({ topA })} />
           <RangeField label="Typical P" value={s.typicalP} min={0} max={1} step={0.01} onChange={(typicalP) => ss({ typicalP })} />
-          <RangeField label="Штраф частоты" value={s.frequencyPenalty} min={-2} max={2} step={0.01} onChange={(frequencyPenalty) => ss({ frequencyPenalty })} />
-          <RangeField label="Штраф присутствия" value={s.presencePenalty} min={-2} max={2} step={0.01} onChange={(presencePenalty) => ss({ presencePenalty })} />
-          <RangeField label="Окно штрафа, ток." value={s.repPenRange} min={0} max={8192} step={64} onChange={(repPenRange) => ss({ repPenRange })} />
-          <RangeField label="DRY множитель" value={s.dryMultiplier} min={0} max={2} step={0.05} onChange={(dryMultiplier) => ss({ dryMultiplier })} />
-          <RangeField label="XTC вероятность" value={s.xtcProbability} min={0} max={1} step={0.01} onChange={(xtcProbability) => ss({ xtcProbability })} />
-          <RangeField label="Бюджет размышлений, ток." value={s.thinkingBudget} min={0} max={32000} step={256} onChange={(thinkingBudget) => ss({ thinkingBudget })} />
-          <Field label="Seed (-1 — случайный)" honey>
+          <RangeField label={t('Frequency penalty')} value={s.frequencyPenalty} min={-2} max={2} step={0.01} onChange={(frequencyPenalty) => ss({ frequencyPenalty })} />
+          <RangeField label={t('Presence penalty')} value={s.presencePenalty} min={-2} max={2} step={0.01} onChange={(presencePenalty) => ss({ presencePenalty })} />
+          <RangeField label={t('Penalty range, tok.')} value={s.repPenRange} min={0} max={8192} step={64} onChange={(repPenRange) => ss({ repPenRange })} />
+          <RangeField label={t('DRY multiplier')} value={s.dryMultiplier} min={0} max={2} step={0.05} onChange={(dryMultiplier) => ss({ dryMultiplier })} />
+          <RangeField label={t('XTC probability')} value={s.xtcProbability} min={0} max={1} step={0.01} onChange={(xtcProbability) => ss({ xtcProbability })} />
+          <RangeField label={t('Thinking budget, tok.')} value={s.thinkingBudget} min={0} max={32000} step={256} onChange={(thinkingBudget) => ss({ thinkingBudget })} />
+          <Field label={t('Seed (-1 means random)')} honey>
             <input className="cs-input" type="number" value={s.seed} onChange={(e) => ss({ seed: Number(e.target.value) })} />
           </Field>
-          <Field label="Усилие рассуждения" honey>
+          <Field label={t('Reasoning effort')} honey>
             <select className="cs-select" value={s.reasoningEffort} onChange={(e) => ss({ reasoningEffort: e.target.value as Samplers['reasoningEffort'] })}>
-              <option value="">по умолчанию</option>
-              <option value="low">низкое</option>
-              <option value="medium">среднее</option>
-              <option value="high">высокое</option>
+              <option value="">{t('default')}</option>
+              <option value="low">{t('low')}</option>
+              <option value="medium">{t('medium')}</option>
+              <option value="high">{t('high')}</option>
             </select>
           </Field>
         </div>
-        <Field label="Стоп-строки · по одной на строку" honey>
+        <Field label={t('Stop strings · one per line')} honey>
           <textarea className="cs-textarea cs-textarea--mono" rows={3} value={s.stop.join('\n')} onChange={(e) => ss({ stop: e.target.value.split('\n').filter((x) => x !== '') })} />
         </Field>
         <Field label="Logit bias · JSON {token_id: bias}" honey>
@@ -173,20 +174,20 @@ function SamplersPanel({ p, set }: { p: Preset; set: (patch: Partial<Preset>) =>
         </Field>
       </details>
       <details className="cs-details">
-        <summary>Служебные промпты</summary>
+        <summary>{t('Utility prompts')}</summary>
         <div className="cs-col" style={{ gap: 12 }}>
           {(
             [
-              ['impersonation', 'Impersonate (реплика за игрока)'],
-              ['continueNudge', 'Продолжение ответа'],
-              ['newChat', 'Начало чата'],
-              ['newGroupChat', 'Начало группового чата'],
-              ['newExampleChat', 'Заголовок примера диалога'],
-              ['groupNudge', 'Подсказка в группе'],
-              ['personalityFormat', 'Формат характера'],
-              ['scenarioFormat', 'Формат сценария'],
-              ['wiFormat', 'Формат лорбука ({0} — записи)'],
-              ['sendIfEmpty', 'Если отправлено пустое сообщение'],
+              ['impersonation', t('Impersonate (a line for the player)')],
+              ['continueNudge', t('Reply continuation')],
+              ['newChat', t('Chat start')],
+              ['newGroupChat', t('Group chat start')],
+              ['newExampleChat', t('Dialogue example header')],
+              ['groupNudge', t('Group nudge')],
+              ['personalityFormat', t('Personality format')],
+              ['scenarioFormat', t('Scenario format')],
+              ['wiFormat', t('Lorebook format ({0} is the entries)')],
+              ['sendIfEmpty', t('If an empty message is sent')],
             ] as [keyof Preset['utility'], string][]
           ).map(([k, label]) => (
             <Field key={k} label={label} honey>
@@ -194,36 +195,36 @@ function SamplersPanel({ p, set }: { p: Preset; set: (patch: Partial<Preset>) =>
             </Field>
           ))}
           <button type="button" className="cs-btn cs-btn--sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ utility: { ...DEFAULT_UTILITY } })}>
-            Вернуть стандартные
+            {t('Restore the defaults')}
           </button>
         </div>
       </details>
       <details className="cs-details">
-        <summary>Формат и рассуждения</summary>
+        <summary>{t('Formatting and reasoning')}</summary>
         <div className="cs-col" style={{ gap: 12 }}>
-          <Field label="Имена в сообщениях" honey>
+          <Field label={t('Names in messages')} honey>
             <select className="cs-select" value={p.namesBehavior} onChange={(e) => set({ namesBehavior: e.target.value as Preset['namesBehavior'] })}>
-              <option value="default">Только в группах</option>
-              <option value="content">Всегда «Имя: текст»</option>
-              <option value="none">Никогда</option>
+              <option value="default">{t('Only in groups')}</option>
+              <option value="content">{t('Always “Name: text”')}</option>
+              <option value="none">{t('Never')}</option>
             </select>
           </Field>
           <Check checked={p.squashSystem} onChange={(squashSystem) => set({ squashSystem })}>
-            Склеивать подряд идущие системные сообщения
+            {t('Merge consecutive system messages')}
           </Check>
           <Check checked={p.reasoning.autoParse} onChange={(autoParse) => set({ reasoning: { ...p.reasoning, autoParse } })}>
-            Выделять мысли модели из текста
+            {t("Separate the model's reasoning from the text")}
           </Check>
           <div className="cs-grid-fields cs-grid-fields--sm">
-            <Field label="Начало мыслей" honey>
+            <Field label={t('Reasoning start')} honey>
               <input className="cs-input cs-input--mono" value={p.reasoning.prefix} onChange={(e) => set({ reasoning: { ...p.reasoning, prefix: e.target.value } })} />
             </Field>
-            <Field label="Конец мыслей" honey>
+            <Field label={t('Reasoning end')} honey>
               <input className="cs-input cs-input--mono" value={p.reasoning.suffix} onChange={(e) => set({ reasoning: { ...p.reasoning, suffix: e.target.value } })} />
             </Field>
           </div>
           <Check checked={p.reasoning.addToPrompt} onChange={(addToPrompt) => set({ reasoning: { ...p.reasoning, addToPrompt } })}>
-            Отправлять прошлые мысли обратно модели
+            {t('Send past reasoning back to the model')}
           </Check>
         </div>
       </details>
@@ -233,29 +234,29 @@ function SamplersPanel({ p, set }: { p: Preset; set: (patch: Partial<Preset>) =>
 }
 
 function InstructPanel({ p, set, instruct, active }: { p: Preset; set: (patch: Partial<Preset>) => void; instruct: InstructTemplate[]; active: boolean }) {
-  const t = instruct.find((x) => x.id === p.instructId) || instruct[0];
-  const setT = (patch: Partial<InstructTemplate>) => t && !t.builtin && upsert('instruct', { ...t, ...patch });
+  const tpl = instruct.find((x) => x.id === p.instructId) || instruct[0];
+  const setT = (patch: Partial<InstructTemplate>) => tpl && !tpl.builtin && upsert('instruct', { ...tpl, ...patch });
   const fields: [keyof InstructTemplate, string][] = [
-    ['systemSequence', 'Начало системного'],
-    ['systemSuffix', 'Конец системного'],
-    ['inputSequence', 'Начало реплики игрока'],
-    ['inputSuffix', 'Конец реплики игрока'],
-    ['outputSequence', 'Начало ответа модели'],
-    ['outputSuffix', 'Конец ответа модели'],
-    ['firstOutputSequence', 'Первый ответ (опц.)'],
-    ['lastOutputSequence', 'Последний ответ (опц.)'],
-    ['storyStringPrefix', 'Префикс всего промпта'],
-    ['stopSequence', 'Стоп-строка'],
+    ['systemSequence', t('System start')],
+    ['systemSuffix', t('System end')],
+    ['inputSequence', t('Player line start')],
+    ['inputSuffix', t('Player line end')],
+    ['outputSequence', t("Start of the model's reply")],
+    ['outputSuffix', t('Model reply end')],
+    ['firstOutputSequence', t('First reply (opt.)')],
+    ['lastOutputSequence', t('Last reply (opt.)')],
+    ['storyStringPrefix', t('Prefix of the whole prompt')],
+    ['stopSequence', t('Stop string')],
   ];
   return (
     <details className="cs-details" open={active}>
-      <summary>Text Completion · шаблон instruct{active ? ' · используется' : ''}</summary>
+      <summary>{t('Text Completion · instruct template')}{active ? t(' · in use') : ''}</summary>
       <div className="cs-row cs-row--wrap" style={{ marginBottom: 10 }}>
-        <select className="cs-select cs-grow" value={p.instructId} onChange={(e) => set({ instructId: e.target.value })} aria-label="Шаблон">
+        <select className="cs-select cs-grow" value={p.instructId} onChange={(e) => set({ instructId: e.target.value })} aria-label={t('Template')}>
           {instruct.map((x) => (
             <option key={x.id} value={x.id}>
               {x.name}
-              {x.builtin ? '' : ' · свой'}
+              {x.builtin ? '' : t(' · custom')}
             </option>
           ))}
         </select>
@@ -263,32 +264,32 @@ function InstructPanel({ p, set, instruct, active }: { p: Preset; set: (patch: P
           type="button"
           className="cs-btn cs-btn--sm"
           onClick={() => {
-            const copy = upsert('instruct', { ...structuredClone(t), id: uid(), name: `${t.name} (свой)`, builtin: false });
+            const copy = upsert('instruct', { ...structuredClone(tpl), id: uid(), name: t('{name} (custom)', { name: tpl.name }), builtin: false });
             set({ instructId: copy.id });
           }}
         >
-          Дублировать
+          {t('Duplicate')}
         </button>
       </div>
-      {t?.builtin ? <p className="cs-hint">Встроенный шаблон. Чтобы править, сделайте копию.</p> : null}
+      {tpl?.builtin ? <p className="cs-hint">{t('A built-in template. Make a copy to edit it.')}</p> : null}
       <div className="cs-grid-fields">
         {fields.map(([k, label]) => (
           <Field key={k} label={label} honey>
-            <input className="cs-input cs-input--mono" value={String(t?.[k] ?? '').replace(/\n/g, '\\n')} disabled={t?.builtin} onChange={(e) => setT({ [k]: e.target.value.replace(/\\n/g, '\n') } as Partial<InstructTemplate>)} />
+            <input className="cs-input cs-input--mono" value={String(tpl?.[k] ?? '').replace(/\n/g, '\\n')} disabled={tpl?.builtin} onChange={(e) => setT({ [k]: e.target.value.replace(/\\n/g, '\n') } as Partial<InstructTemplate>)} />
           </Field>
         ))}
       </div>
       <div className="cs-row cs-row--wrap" style={{ marginTop: 8 }}>
-        <Check checked={!!t?.wrap} onChange={(wrap) => setT({ wrap })}>
-          Перенос строки после маркеров
+        <Check checked={!!tpl?.wrap} onChange={(wrap) => setT({ wrap })}>
+          {t('Line break after the markers')}
         </Check>
-        <Check checked={!!t?.systemSameAsUser} onChange={(systemSameAsUser) => setT({ systemSameAsUser })}>
-          Системное как реплика игрока
+        <Check checked={!!tpl?.systemSameAsUser} onChange={(systemSameAsUser) => setT({ systemSameAsUser })}>
+          {t('System as a player line')}
         </Check>
-        <select className="cs-select cs-select--sm" value={t?.namesBehavior} disabled={t?.builtin} onChange={(e) => setT({ namesBehavior: e.target.value as InstructTemplate['namesBehavior'] })} aria-label="Имена">
-          <option value="force">Имена в группах</option>
-          <option value="always">Имена всегда</option>
-          <option value="none">Без имён</option>
+        <select className="cs-select cs-select--sm" value={tpl?.namesBehavior} disabled={tpl?.builtin} onChange={(e) => setT({ namesBehavior: e.target.value as InstructTemplate['namesBehavior'] })} aria-label={t('Names')}>
+          <option value="force">{t('Names in groups')}</option>
+          <option value="always">{t('Names always')}</option>
+          <option value="none">{t('No names')}</option>
         </select>
       </div>
     </details>
@@ -314,7 +315,7 @@ function PromptPreview({ built }: { built: BuiltPrompt | null }) {
     const params = samplersToParams(preset, built.stop);
     return JSON.stringify(
       {
-        model: conn?.model || '[модель]',
+        model: conn?.model || t('[model]'),
         ...Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== 0 && !(Array.isArray(v) && !v.length))),
         stream: preset.samplers.stream,
         ...(built.mode === 'text' ? { prompt: built.text } : { messages: built.messages.map((m) => ({ role: m.role, content: m.content })) }),
@@ -334,28 +335,28 @@ function PromptPreview({ built }: { built: BuiltPrompt | null }) {
   const total = built ? Object.values(built.breakdown).reduce((a, b) => a + b, 0) : 0;
 
   return (
-    <section ref={ref} aria-label="Что уходит модели" className="cs-panel cs-panel--strong cs-panel--pad-lg" style={{ flex: '1 1 460px', minWidth: 0 }}>
+    <section ref={ref} aria-label={t('What goes to the model')} className="cs-panel cs-panel--strong cs-panel--pad-lg" style={{ flex: '1 1 460px', minWidth: 0 }}>
       <div className="cs-panel-head">
         <span style={{ display: 'flex', color: 'var(--cs-accent)' }}>
           <Icon name="eye" size={22} />
         </span>
         <h2 className="cs-h2" style={{ fontSize: 19 }}>
-          Что уходит модели
+          {t('What goes to the model')}
         </h2>
         <div className="cs-ml-auto">
           <Tabs
-            label="Вид запроса"
+            label={t('Request view')}
             value={tab}
             onChange={setTab}
             items={[
-              { id: 'messages', label: 'Сообщения' },
-              { id: 'json', label: 'Сырой JSON' },
+              { id: 'messages', label: t('Messages') },
+              { id: 'json', label: t('Raw JSON') },
             ]}
           />
         </div>
       </div>
       {!built ? (
-        <p className="cs-hint">Откройте чат с персонажем — здесь появится точный запрос, который уйдёт модели.</p>
+        <p className="cs-hint">{t('Open a chat with a character: the exact request that will go to the model shows up here.')}</p>
       ) : (
         <>
           <div>
@@ -373,8 +374,7 @@ function PromptPreview({ built }: { built: BuiltPrompt | null }) {
               ))}
             </div>
             <div className="cs-hint" style={{ marginTop: 6 }}>
-              Всего {fmtNum(total)} из {fmtNum(built.contextSize)} · ответ до {fmtNum(built.maxTokens)} · история {built.historyIncluded}/{built.historyTotal}
-              {built.mode === 'text' ? ' · Text Completion' : ''}
+              {t('Total {total} of {contextSize} · reply up to {maxTokens} · history {historyIncluded}/{historyTotal}{x}', { total: fmtNum(total), contextSize: fmtNum(built.contextSize), maxTokens: fmtNum(built.maxTokens), historyIncluded: built.historyIncluded, historyTotal: built.historyTotal, x: built.mode === 'text' ? ' · Text Completion' : '' })}
             </div>
             {built.warnings.map((w) => (
               <p key={w} className="cs-hint" style={{ color: 'var(--cs-rose-deep)' }}>
@@ -409,17 +409,17 @@ function PromptPreview({ built }: { built: BuiltPrompt | null }) {
               })}
             </ol>
           ) : (
-            <CodeEditor value={json} lang="json" readOnly minHeight={300} label="Сырой запрос" />
+            <CodeEditor value={json} lang="json" readOnly minHeight={300} label={t('Raw request')} />
           )}
           {dry ? (
             <div className="cs-honey-box">
-              <span className="cs-label cs-label--honey">Пробный ответ · {(dry.ms / 1000).toFixed(1)} с</span>
+              <span className="cs-label cs-label--honey">{t('Test reply · {x} s', { x: (dry.ms / 1000).toFixed(1) })}</span>
               <p style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.55 }}>{dry.text}</p>
             </div>
           ) : null}
           <div className="cs-row cs-row--wrap">
-            <button type="button" className="cs-btn cs-btn--flex" onClick={() => copyText(json).then(() => toast('Запрос скопирован'))}>
-              Копировать запрос
+            <button type="button" className="cs-btn cs-btn--flex" onClick={() => copyText(json).then(() => toast(t('Request copied')))}>
+              {t('Copy the request')}
             </button>
             <button
               type="button"
@@ -432,22 +432,22 @@ function PromptPreview({ built }: { built: BuiltPrompt | null }) {
                   const started = Date.now();
                   const r = await generateOnce({
                     connectionId: c.id,
-                    label: 'Пробный прогон',
+                    label: t('Dry run'),
                     mode: built.mode,
                     messages: built.mode === 'chat' ? await toWireMessages(built.messages) : undefined,
                     prompt: built.text,
                     params: samplersToParams(preset!, built.stop),
                   });
-                  setDry({ text: r.text || '(пустой ответ)', ms: Date.now() - started });
+                  setDry({ text: r.text || t('(empty reply)'), ms: Date.now() - started });
                 } catch (err) {
-                  if ((err as Error).message !== 'no-connection') toastError(err, 'Пробный прогон');
+                  if ((err as Error).message !== 'no-connection') toastError(err, t('Dry run'));
                 } finally {
                   setRunning(false);
                 }
               }}
             >
               {running ? <span className="cs-spinner" /> : null}
-              Пробный прогон
+              {t('Dry run')}
             </button>
           </div>
         </>
@@ -478,9 +478,9 @@ export default function PresetsPage() {
 
   return (
     <div className="cs-page">
-      <PageHead title="Пресеты" kana="プリセット" sub="Порядок промптов, сэмплеры и предпросмотр запроса">
+      <PageHead title={t('Presets')} kana="プリセット" sub={t('Prompt order, samplers and request preview')}>
         <label className="cs-inline-field">
-          Пресет
+          {t('Preset')}
           <select className="cs-select cs-select--pill" style={{ minWidth: 190 }} value={p.id} onChange={(e) => updateSettings({ activePresetId: e.target.value })}>
             {presets.map((x) => (
               <option key={x.id} value={x.id}>
@@ -491,54 +491,54 @@ export default function PresetsPage() {
         </label>
         <div className="cs-row cs-row--wrap">
           <button type="button" className="cs-btn" onClick={importPresetsInteractive}>
-            Импорт
+            {t('Import')}
           </button>
           <button type="button" className="cs-btn" onClick={() => exportPreset(p.id)}>
-            Экспорт
+            {t('Export')}
           </button>
           <button
             type="button"
             className="cs-btn cs-btn--primary"
             onClick={async () => {
-              const name = await promptDialog('Сохранить как новый пресет', { value: `${p.name} (копия)` });
+              const name = await promptDialog(t('Save as a new preset'), { value: t('{name} (copy)', { name: p.name }) });
               if (!name) return;
               const copy = upsert('presets', { ...structuredClone(p), id: uid(), name });
               updateSettings({ activePresetId: copy.id });
-              toast(`Пресет «${name}» сохранён`);
+              toast(t('Preset “{name}” saved', { name }));
             }}
           >
-            Сохранить как…
+            {t('Save as…')}
           </button>
           <button
             type="button"
             className="cs-icon-btn"
-            aria-label="Ещё"
+            aria-label={t('More')}
             onClick={(e) =>
               openMenu(e.currentTarget, [
                 {
-                  label: 'Переименовать',
+                  label: t('Rename'),
                   icon: 'edit',
                   onClick: async () => {
-                    const name = await promptDialog('Название пресета', { value: p.name });
+                    const name = await promptDialog(t('Preset name'), { value: p.name });
                     if (name) set({ name });
                   },
                 },
-                { label: 'Новый пустой пресет', icon: 'plus', onClick: () => updateSettings({ activePresetId: upsert('presets', newPreset({ name: 'Новый пресет' })).id }) },
+                { label: t('New empty preset'), icon: 'plus', onClick: () => updateSettings({ activePresetId: upsert('presets', newPreset({ name: t('New preset') })).id }) },
                 {
-                  label: 'Сбросить блоки к стандартным',
+                  label: t('Reset blocks to the defaults'),
                   icon: 'undo',
                   onClick: async () => {
-                    if (await confirmDialog('Вернуть стандартный набор блоков? Свои блоки пропадут.', { ok: 'Сбросить' })) set({ prompts: defaultPromptBlocks() });
+                    if (await confirmDialog(t('Bring back the default set of blocks? Your own blocks will be lost.'), { ok: t('Reset') })) set({ prompts: defaultPromptBlocks() });
                   },
                 },
                 { separator: true, label: '' },
                 {
-                  label: 'Удалить пресет',
+                  label: t('Delete the preset'),
                   icon: 'trash',
                   danger: true,
                   hidden: presets.length < 2,
                   onClick: async () => {
-                    if (!(await confirmDialog(`Удалить пресет «${p.name}»?`, { ok: 'Удалить' }))) return;
+                    if (!(await confirmDialog(t('Delete the preset “{name}”?', { name: p.name }), { ok: t('Delete') }))) return;
                     await removeItem('presets', p.id);
                     updateSettings({ activePresetId: presets.find((x) => x.id !== p.id)!.id });
                   },
@@ -552,24 +552,24 @@ export default function PresetsPage() {
       </PageHead>
 
       <div className="cs-columns">
-        <section aria-label="Менеджер промптов" className="cs-panel cs-panel--pad-lg" style={{ flex: '1 1 520px', minWidth: 0 }}>
+        <section aria-label={t('Prompt manager')} className="cs-panel cs-panel--pad-lg" style={{ flex: '1 1 520px', minWidth: 0 }}>
           <div className="cs-panel-head">
             <h2 className="cs-h2" style={{ fontSize: 19 }}>
-              Менеджер промптов
+              {t('Prompt manager')}
             </h2>
-            <span className="cs-pill cs-pill--mono">{fmtNum(enabledTotal)} ток.</span>
+            <span className="cs-pill cs-pill--mono">{fmtNum(enabledTotal)} {t('tok.')}</span>
             <button
               type="button"
               className="cs-btn cs-btn--mint cs-btn--sm cs-ml-auto"
               onClick={() =>
-                setEditing({ id: uid(), name: 'Новый блок', role: 'system', content: '', enabled: true, position: 'relative', depth: 4, order: 100 })
+                setEditing({ id: uid(), name: t('New block'), role: 'system', content: '', enabled: true, position: 'relative', depth: 4, order: 100 })
               }
             >
               <Icon name="plus" size={16} stroke={2.2} />
-              Блок
+              {t('Block')}
             </button>
           </div>
-          <div className="cs-hint">Перетаскивай блоки, чтобы поменять порядок. Выключенные не уходят модели.</div>
+          <div className="cs-hint">{t("Drag blocks to change the order. Blocks that are off don't go to the model.")}</div>
           <div className="cs-col" style={{ gap: 8 }} ref={sortable.container as RefObject<HTMLDivElement>}>
             {p.prompts.map((b, i) => {
               const tokens = blockTokens(b);
@@ -580,23 +580,24 @@ export default function PresetsPage() {
                   data-sort-row
                   className={`cs-prompt-row${b.enabled ? '' : ' cs-prompt-row--off'}${sortable.drag?.from === i ? ' cs-prompt-row--drag' : ''}${sortable.drag && sortable.drag.over === i && sortable.drag.from !== i ? ' cs-prompt-row--over' : ''}`}
                 >
-                  <span className="cs-grip" aria-label="Перетащить" {...sortable.handleProps(i)}>
+                  <span className="cs-grip" aria-label={t('Drag')} {...sortable.handleProps(i)}>
                     <Icon name="grip" size={18} />
                   </span>
                   <span className={`cs-role cs-role--${roleKey}`}>{ROLE_LABEL[roleKey]}</span>
                   <div className="cs-grow">
                     <div className="cs-ellipsis" style={{ fontWeight: 800, fontSize: 14 }}>
-                      {b.name}
+                      {/* Built-in block names are English keys with a translation. */}
+                      {t(b.name)}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--cs-muted)' }}>{whereLabel(b, i, p.prompts, built)}</div>
                   </div>
                   <span className="cs-mono" style={{ fontSize: 12, color: 'var(--cs-muted)' }}>
                     {tokens === null ? '' : fmtNum(tokens)}
                   </span>
-                  <button type="button" className="cs-icon-btn cs-icon-btn--soft" aria-label="Редактировать блок" onClick={() => setEditing(b)}>
+                  <button type="button" className="cs-icon-btn cs-icon-btn--soft" aria-label={t('Edit the block')} onClick={() => setEditing(b)}>
                     <Icon name="edit" size={16} stroke={2} />
                   </button>
-                  <Switch checked={b.enabled} label={b.enabled ? 'Выключить блок' : 'Включить блок'} onChange={(enabled) => set({ prompts: p.prompts.map((x) => (x.id === b.id ? { ...x, enabled } : x)) })} />
+                  <Switch checked={b.enabled} label={b.enabled ? t('Turn the block off') : t('Turn the block on')} onChange={(enabled) => set({ prompts: p.prompts.map((x) => (x.id === b.id ? { ...x, enabled } : x)) })} />
                 </div>
               );
             })}

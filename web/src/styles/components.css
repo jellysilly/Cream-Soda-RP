@@ -109,6 +109,29 @@
   color: var(--cs-card-label);
 }
 
+/* ───────── Prompt editor ───────── */
+.cs-prompt-editor__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cs-prompt-editor__label .cs-pill {
+  padding: 2px 8px;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.cs-prompt-editor__hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 /* ───────── Buttons ───────── */
 .cs-btn {
   display: inline-flex;

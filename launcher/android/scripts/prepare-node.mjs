@@ -21,7 +21,7 @@ const root = path.resolve(android, '..', '..');
 const out = path.join(android, 'www', 'nodejs');
 
 if (!fs.existsSync(path.join(root, 'web', 'dist', 'index.html'))) {
-  console.error('Нет web/dist — сначала соберите интерфейс: npm run build (в корне проекта)');
+  console.error('No web/dist: build the interface first with npm run build (in the project root)');
   process.exit(1);
 }
 
@@ -46,7 +46,7 @@ const pkg = {
 };
 fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
 
-console.log('[android] ставлю зависимости сервера…');
+console.log('[android] installing the server dependencies…');
 execSync('npm install --omit=dev --ignore-scripts --no-audit --no-fund --no-package-lock', { cwd: out, stdio: 'inherit' });
 
 // Fewer files unpack faster on the first start: drop docs, typings and tests.
@@ -66,4 +66,4 @@ let removed = 0;
   }
 })(path.join(out, 'node_modules'));
 
-console.log(`[android] www/nodejs готов (убрано лишних файлов: ${removed})`);
+console.log(`[android] www/nodejs is ready (removed ${removed} extra files)`);

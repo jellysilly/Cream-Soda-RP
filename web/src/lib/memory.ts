@@ -1,5 +1,7 @@
+import { prompt } from './prompts';
 import type { Chat, ChatMessage, MemoryBook, MemoryChapter, Settings } from './types';
 import { countTokens } from './tokenizer';
+import { t } from './i18n';
 
 /** Index range [from, to] of a chapter inside the chat, or null if its messages are gone. */
 export function chapterRange(chat: Chat, ch: MemoryChapter): [number, number] | null {
@@ -56,19 +58,16 @@ export function buildMemoryText(chat: Chat, settings: Settings['memory'], recent
   let used = countTokens(factsText);
   const keep = new Set<string>();
   for (const { c } of ranked) {
-    const t = countTokens(c.summary) + 8;
-    if (used + t > budget) continue;
-    used += t;
+    const tokens = countTokens(c.summary) + 8;
+    if (used + tokens > budget) continue;
+    used += tokens;
     keep.add(c.id);
   }
   const chaptersText = chapters
     .filter((c) => keep.has(c.id))
-    .map((c, i) => `Глава ${i + 1} · «${c.title}»: ${c.summary.trim()}`)
+    .map((c, i) => `Chapter ${i + 1} · "${c.title}": ${c.summary.trim()}`)
     .join('\n');
-  const text = (settings.template || '{{chapters}}\n{{facts}}')
-    .replace('{{chapters}}', chaptersText || '—')
-    .replace('{{facts}}', factsText || '—')
-    .trim();
+  const text = prompt('memoryBlock', { chapters: chaptersText || '—', facts: factsText || '—' }).trim();
   return { text, tokens: countTokens(text) };
 }
 
@@ -88,7 +87,7 @@ export function messagesToTranscript(messages: ChatMessage[]): string {
     .join('\n\n');
 }
 
-/** Parses «Название: … / Конспект: … / Ключи: …» answers (tolerant to formatting). */
+/** Parses «Title: … / Summary: … / Keys: …» answers, also the Russian labels of older prompts (tolerant to formatting). */
 export function parseSummary(text: string): { title: string; summary: string; keys: string[] } {
   const clean = text.replace(/\*\*/g, '');
   const grab = (label: RegExp) => {
@@ -102,7 +101,7 @@ export function parseSummary(text: string): { title: string; summary: string; ke
   if (sm) summary = sm[1].trim();
   if (!summary) summary = clean.replace(/(?:название|title)\s*[:：].+/i, '').replace(/(?:ключи|keys)\s*[:：].+/i, '').trim();
   return {
-    title: title.replace(/^[«"]|[»"]$/g, '') || 'Без названия',
+    title: title.replace(/^[«"]|[»"]$/g, '') || t('Untitled'),
     summary,
     keys: keysRaw
       .split(/[,;]/)
@@ -113,10 +112,10 @@ export function parseSummary(text: string): { title: string; summary: string; ke
 }
 
 export function parseFacts(text: string): string[] {
-  if (/^\s*нет\.?\s*$/i.test(text)) return [];
+  if (/^\s*(?:нет|none|no)\.?\s*$/i.test(text)) return [];
   return text
     .split('\n')
     .map((l) => l.replace(/^\s*[-•*\d.)]+\s*/, '').trim())
-    .filter((l) => l.length > 3 && !/^нет\.?$/i.test(l))
+    .filter((l) => l.length > 3 && !/^(?:нет|none)\.?$/i.test(l))
     .slice(0, 5);
 }

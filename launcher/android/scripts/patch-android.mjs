@@ -4,7 +4,7 @@
  * after every `cap add` / `cap sync`: each change is skipped if already present.
  *
  *  - AndroidManifest: cleartext HTTP to the local server, foreground service for
- *    «Работать в фоне», notification permission, ML Kit QR scanner module.
+ *    «Run in background», notification permission, ML Kit QR scanner module.
  *  - MainActivity: window.CreamSodaAndroid for saving exported files.
  *  - Notification icon.
  *  - app/cream-soda.gradle: version from package.json, one APK per ABI,
@@ -20,7 +20,7 @@ const appDir = path.join(android, 'android', 'app', 'src', 'main');
 const config = JSON.parse(fs.readFileSync(path.join(android, 'capacitor.config.json'), 'utf8'));
 
 if (!fs.existsSync(appDir)) {
-  console.error('Нет android/ — сначала выполните: npx cap add android');
+  console.error('No android/ folder: run npx cap add android first');
   process.exit(1);
 }
 
@@ -98,4 +98,4 @@ if (!buildGradle.includes("apply from: 'cream-soda.gradle'")) {
   fs.writeFileSync(buildGradlePath, `${buildGradle.trimEnd()}\n\napply from: 'cream-soda.gradle'\n`);
 }
 
-console.log('[android] нативные настройки применены');
+console.log('[android] native settings applied');

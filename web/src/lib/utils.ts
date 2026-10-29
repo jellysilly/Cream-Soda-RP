@@ -1,3 +1,5 @@
+import { getLang, locale, t } from './i18n';
+
 export function uid(len = 12): string {
   const bytes = new Uint8Array(len);
   crypto.getRandomValues(bytes);
@@ -15,47 +17,39 @@ export function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
-const nf = new Intl.NumberFormat('ru-RU');
+const nf = new Intl.NumberFormat(locale());
 export function fmtNum(n: number): string {
   return nf.format(Math.round(n || 0));
 }
 
-/** 32768 → 32k, 6412 → 6,4k */
+/** 32768 → 32k, 6412 → 6.4k (6,4k in Russian) */
 export function fmtK(n: number): string {
   if (n < 1000) return String(Math.round(n));
   const k = n / 1000;
-  return `${k >= 10 ? Math.floor(k) : k.toFixed(1).replace('.', ',').replace(',0', '')}k`;
+  const sep = locale() === 'ru-RU' ? ',' : '.';
+  return `${k >= 10 ? Math.floor(k) : k.toFixed(1).replace('.', sep).replace(`${sep}0`, '')}k`;
 }
 
 export function fmtTime(ts: number): string {
   if (!ts) return '';
-  return new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 }
 
 export function fmtDate(ts: number): string {
   if (!ts) return '';
   const d = new Date(ts);
   const now = new Date();
-  if (d.toDateString() === now.toDateString()) return `сегодня, ${fmtTime(ts)}`;
+  if (d.toDateString() === now.toDateString()) return t('today, {time}', { time: fmtTime(ts) });
   const y = new Date(now);
   y.setDate(now.getDate() - 1);
-  if (d.toDateString() === y.toDateString()) return `вчера, ${fmtTime(ts)}`;
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+  if (d.toDateString() === y.toDateString()) return t('yesterday, {time}', { time: fmtTime(ts) });
+  return d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
 }
 
 export function fmtBytes(n: number): string {
-  if (n < 1024) return `${n} Б`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} КБ`;
-  return `${(n / 1024 / 1024).toFixed(1)} МБ`;
-}
-
-export function plural(n: number, one: string, few: string, many: string): string {
-  const a = Math.abs(n) % 100;
-  const b = a % 10;
-  if (a > 10 && a < 20) return many;
-  if (b > 1 && b < 5) return few;
-  if (b === 1) return one;
-  return many;
+  if (n < 1024) return t('{n} B', { n });
+  if (n < 1024 * 1024) return t('{n} KB', { n: (n / 1024).toFixed(0) });
+  return t('{n} MB', { n: (n / 1024 / 1024).toFixed(1) });
 }
 
 export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): T & { flush: () => void; cancel: () => void } {
@@ -98,11 +92,15 @@ export function escapeRegex(s: string): string {
 
 interface AndroidFiles {
   saveBase64(data: string, name: string, mime: string): string;
+  setLanguage?(lang: string): void;
 }
 
 /** Present inside the Android app, whose WebView ignores <a download>. */
 function androidFiles(): AndroidFiles | undefined {
-  return (window as unknown as { CreamSodaAndroid?: AndroidFiles }).CreamSodaAndroid;
+  const files = (window as unknown as { CreamSodaAndroid?: AndroidFiles }).CreamSodaAndroid;
+  // Its «Saved: …» toast speaks the interface language (older APKs lack setLanguage).
+  files?.setLanguage?.(getLang());
+  return files;
 }
 
 function blobToBase64(blob: Blob): Promise<string> {

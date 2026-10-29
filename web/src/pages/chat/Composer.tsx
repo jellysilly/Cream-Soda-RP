@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { useStore, setState, updateSettingsSection, updateSettings, toastError, getState, navigate } from '../../lib/store';
+import { useStore, setState, updateSettingsSection, updateSettings, toast, toastError, getState, navigate } from '../../lib/store';
 import { sendUserMessage, impersonate, stopGeneration, editMessage, continueMessage, regenerateLast, generateReplies } from '../../lib/generate';
 import { Icon } from '../../components/Icon';
 import { openMenu } from '../../components/ui';
@@ -8,12 +8,13 @@ import { api } from '../../lib/api';
 import type { Attachment, ImpersonateMode } from '../../lib/types';
 import { slashHelp, runSlash } from '../../lib/slash';
 import { pickFiles } from '../../lib/utils';
+import { t, tn } from '../../lib/i18n';
 
 const MODES: { id: ImpersonateMode; label: string }[] = [
-  { id: 'continue', label: 'Продолжить мою реплику' },
-  { id: 'variants', label: '3 варианта' },
-  { id: 'action', label: 'Только действие' },
-  { id: 'voice', label: 'Голос персоны' },
+  { id: 'continue', label: t('Continue my reply') },
+  { id: 'variants', label: t('3 variants') },
+  { id: 'action', label: t('Action only') },
+  { id: 'voice', label: t('Persona voice') },
 ];
 
 export function Composer() {
@@ -39,7 +40,11 @@ export function Composer() {
   const generating = gen.kind !== null;
   const impersonating = gen.kind === 'impersonate';
   const count = imp.count || 3;
-  const modes = MODES.map((m) => (m.id === 'variants' ? { ...m, label: `${count} ${count < 5 ? 'варианта' : 'вариантов'}` } : m));
+  const modes = MODES.map((m) => (m.id === 'variants' ? { ...m, label: `${count} ${tn(count, 'variant|variants')}` } : m));
+  const showImpBar = (shown: boolean) => {
+    updateSettingsSection('impersonate', { hidden: !shown });
+    if (!shown) toast(t('Impersonate+ is hidden. It is still in the tools menu, and the bar comes back from there or from Settings → General.'));
+  };
 
   useEffect(() => {
     const el = ta.current;
@@ -98,7 +103,7 @@ export function Composer() {
       const last = [...msgs].reverse().find((m) => m.role === 'user');
       if (last) {
         e.preventDefault();
-        const text = window.prompt('Править последнее сообщение', last.text);
+        const text = window.prompt(t('Edit the last message'), last.text);
         if (text !== null) editMessage(last.id, text);
       }
     }
@@ -123,35 +128,36 @@ export function Composer() {
 
   const toolsMenu = (el: HTMLElement) =>
     openMenu(el, [
-      { label: 'Прикрепить картинку', icon: 'images', onClick: () => attach('image') },
-      { label: 'Прикрепить текстовый файл', icon: 'attach', onClick: () => attach('file') },
+      { label: t('Attach an image'), icon: 'images', onClick: () => attach('image') },
+      { label: t('Attach a text file'), icon: 'attach', onClick: () => attach('file') },
       { separator: true, label: '' },
-      { label: 'Impersonate+ · предложить', icon: 'sparkle', hidden: !impEnabled, onClick: () => impersonate() },
-      { label: 'Продолжить последний ответ', icon: 'arrow', onClick: () => continueMessage() },
-      { label: 'Перегенерировать', icon: 'refresh', onClick: () => regenerateLast() },
-      { label: 'Ответ без моего сообщения', icon: 'chat', onClick: () => generateReplies() },
-      { label: 'Сообщение рассказчика', icon: 'note', onClick: () => setDraft('/sys ') },
-      { label: 'Бросить кубик d20', icon: 'dice', onClick: () => runSlash('/roll 1d20') },
-      { label: 'Список команд', icon: 'code', onClick: () => runSlash('/help') },
+      { label: t('Impersonate+ · suggest'), icon: 'sparkle', hidden: !impEnabled, onClick: () => impersonate() },
+      { label: imp.hidden ? t('Show the Impersonate+ bar') : t('Hide the Impersonate+ bar'), icon: imp.hidden ? 'eye' : 'eyeOff', hidden: !impEnabled, onClick: () => showImpBar(!!imp.hidden) },
+      { label: t('Continue the last reply'), icon: 'arrow', onClick: () => continueMessage() },
+      { label: t('Regenerate'), icon: 'refresh', onClick: () => regenerateLast() },
+      { label: t('Reply without my message'), icon: 'chat', onClick: () => generateReplies() },
+      { label: t('Narrator message'), icon: 'note', onClick: () => setDraft('/sys ') },
+      { label: t('Roll a d20'), icon: 'dice', onClick: () => runSlash('/roll 1d20') },
+      { label: t('List of commands'), icon: 'code', onClick: () => runSlash('/help') },
     ]);
 
   const personaMenu = (el: HTMLElement) =>
     openMenu(el, [
       ...personas.map((p) => ({
-        label: `${p.name}${p.id === persona?.id ? ' · активна' : ''}`,
+        label: `${p.name}${p.id === persona?.id ? t(' · active') : ''}`,
         icon: 'user',
         onClick: () => updateSettings({ activePersonaId: p.id }),
       })),
       { separator: true, label: '' },
-      { label: 'Управлять персонами', icon: 'chars', onClick: () => navigate('library', 'personas') },
+      { label: t('Manage personas'), icon: 'chars', onClick: () => navigate('library', 'personas') },
     ]);
 
   const qrs = qrEnabled ? quickreplies.filter((q) => q.enabled).flatMap((q) => q.replies) : [];
 
   return (
-    <section className="cs-composer" aria-label="Ввод сообщения">
+    <section className="cs-composer" aria-label={t('Message input')}>
       {hints.length ? (
-        <div className="cs-slash-hints" role="listbox" aria-label="Команды">
+        <div className="cs-slash-hints" role="listbox" aria-label={t('Commands')}>
           {hints.map((h, i) => (
             <button key={h.name} type="button" role="option" aria-selected={i === hintIdx % hints.length} onClick={() => setDraft(`/${h.name} `)}>
               <code>/{h.name}</code>
@@ -161,16 +167,16 @@ export function Composer() {
         </div>
       ) : null}
 
-      {impEnabled && hasChat ? (
+      {impEnabled && hasChat && !imp.hidden ? (
         <div className="cs-impersonate">
-          <button type="button" className="cs-impersonate__label" onClick={() => impersonate()} disabled={generating} title="Предложить реплику">
+          <button type="button" className="cs-impersonate__label" onClick={() => impersonate()} disabled={generating} title={t('Suggest a reply')}>
             <Icon name="sparkle" size={18} />
             Impersonate+
           </button>
           <select
             className="cs-select cs-select--sm cs-imp-mode-mobile"
             value={imp.mode}
-            aria-label="Режим Impersonate+"
+            aria-label={t('Impersonate+ mode')}
             onChange={(e) => updateSettingsSection('impersonate', { mode: e.target.value as ImpersonateMode })}
           >
             {modes.map((m) => (
@@ -192,20 +198,25 @@ export function Composer() {
               {m.label}
             </button>
           ))}
-          <label className="cs-direction">
-            Направление
-            <input value={imp.direction} placeholder="например: мягкий флирт, без спешки" onChange={(e) => updateSettingsSection('impersonate', { direction: e.target.value })} />
-            <button
-              type="button"
-              className="cs-icon-btn"
-              aria-label={impersonating ? 'Остановить' : 'Предложить реплику'}
-              title={impersonating ? 'Остановить' : 'Предложить'}
-              onClick={() => (impersonating ? stopGeneration() : impersonate())}
-              disabled={generating && !impersonating}
-            >
-              <Icon name={impersonating ? 'stop' : 'sparkle'} size={15} />
+          <div className="cs-impersonate__tail">
+            <label className="cs-direction">
+              {t('Direction')}
+              <input value={imp.direction} placeholder={t('e.g. gentle flirting, no rush')} onChange={(e) => updateSettingsSection('impersonate', { direction: e.target.value })} />
+              <button
+                type="button"
+                className="cs-icon-btn"
+                aria-label={impersonating ? t('Stop') : t('Suggest a reply')}
+                title={impersonating ? t('Stop') : t('Suggest')}
+                onClick={() => (impersonating ? stopGeneration() : impersonate())}
+                disabled={generating && !impersonating}
+              >
+                <Icon name={impersonating ? 'stop' : 'sparkle'} size={15} />
+              </button>
+            </label>
+            <button type="button" className="cs-icon-btn cs-icon-btn--xs" aria-label={t('Hide the Impersonate+ bar')} title={t('Hide the Impersonate+ bar')} onClick={() => showImpBar(false)}>
+              <Icon name="eyeOff" size={14} />
             </button>
-          </label>
+          </div>
         </div>
       ) : null}
 
@@ -213,7 +224,7 @@ export function Composer() {
         <div className="cs-variants">
           {impersonating && !variants.length ? (
             <div className="cs-variant" aria-pressed="false">
-              <span className="cs-variant__label">Придумываю варианты…</span>
+              <span className="cs-variant__label">{t('Coming up with variants…')}</span>
               <span dangerouslySetInnerHTML={{ __html: formatMessage(streamText.slice(-400), { markdown: true, html: false }) }} />
             </div>
           ) : (
@@ -230,8 +241,8 @@ export function Composer() {
                 }}
               >
                 <span className="cs-variant__label">
-                  Вариант {String.fromCharCode(65 + i)}
-                  {selected === i ? ' · выбран' : ''}
+                  {t('Variant {x}', { x: String.fromCharCode(65 + i) })}
+                  {selected === i ? t(' · selected') : ''}
                 </span>
                 <span dangerouslySetInnerHTML={{ __html: formatMessage(v, { markdown: true, html: false }) }} />
               </button>
@@ -263,7 +274,7 @@ export function Composer() {
             <span key={i} className="cs-attach-chip">
               {a.kind === 'image' ? <img src={a.url} alt="" /> : <Icon name="attach" size={14} />}
               <span className="cs-ellipsis">{a.name}</span>
-              <button type="button" aria-label="Убрать" onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}>
+              <button type="button" aria-label={t('Remove')} onClick={() => setAttachments((x) => x.filter((_, j) => j !== i))}>
                 ×
               </button>
             </span>
@@ -272,22 +283,22 @@ export function Composer() {
       ) : null}
 
       <div className="cs-input-row">
-        <button type="button" className="cs-icon-btn cs-icon-btn--soft" style={{ width: 44, height: 44 }} aria-label="Инструменты" onClick={(e) => toolsMenu(e.currentTarget)}>
+        <button type="button" className="cs-icon-btn cs-icon-btn--soft" style={{ width: 44, height: 44 }} aria-label={t('Tools')} onClick={(e) => toolsMenu(e.currentTarget)}>
           <Icon name="plus" size={20} stroke={2} />
         </button>
         <label className="cs-input-box">
           <span className="cs-input-box__label">
-            Твой ход ·
+            {t('Your turn ·')}
             <button type="button" onClick={(e) => (e.preventDefault(), personaMenu(e.currentTarget))}>
-              {persona?.name || 'персона'}
+              {persona?.name || t('persona')}
             </button>
-            {group ? <span style={{ marginLeft: 'auto' }}>группа · {group.activation === 'manual' ? 'ручной порядок' : 'естественный порядок'}</span> : null}
+            {group ? <span style={{ marginLeft: 'auto' }}>{t('group ·')} {group.activation === 'manual' ? t('manual order') : t('natural order')}</span> : null}
           </span>
           <textarea
             ref={ta}
             rows={2}
             value={draft}
-            placeholder={hasChat ? 'Напиши реплику или /команду…' : 'Выберите персонажа в библиотеке'}
+            placeholder={hasChat ? t('Write a line or a /command…') : t('Pick a character in the library')}
             disabled={!hasChat}
             onChange={(e) => {
               setDraft(e.target.value);
@@ -300,17 +311,17 @@ export function Composer() {
               e.preventDefault();
               for (const f of files) {
                 const res = await api.upload('attachments', f, f.name || 'paste.png');
-                setAttachments((a) => [...a, { kind: 'image', url: res.url, name: f.name || 'картинка', mime: f.type }]);
+                setAttachments((a) => [...a, { kind: 'image', url: res.url, name: f.name || t('image'), mime: f.type }]);
               }
             }}
           />
         </label>
         {generating && !impersonating ? (
-          <button type="button" className="cs-send" aria-label="Остановить" title="Остановить генерацию" onClick={stopGeneration}>
+          <button type="button" className="cs-send" aria-label={t('Stop')} title={t('Stop generating')} onClick={stopGeneration}>
             <Icon name="stop" size={22} />
           </button>
         ) : (
-          <button type="button" className="cs-send" aria-label="Отправить" title="Отправить" onClick={send} disabled={!hasChat || impersonating}>
+          <button type="button" className="cs-send" aria-label={t('Send')} title={t('Send')} onClick={send} disabled={!hasChat || impersonating}>
             <Icon name="arrow" size={22} stroke={2.2} />
           </button>
         )}

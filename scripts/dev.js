@@ -30,7 +30,7 @@ const procs = [
   pipe(child.stdout, process.stdout);
   pipe(child.stderr, process.stderr);
   child.on('exit', (code) => {
-    console.log(`${tag}остановлен (код ${code})`);
+    console.log(`${tag}stopped (code ${code})`);
     stopAll(code ?? 0);
   });
   return child;

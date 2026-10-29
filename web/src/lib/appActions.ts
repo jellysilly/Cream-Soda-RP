@@ -22,6 +22,7 @@ import { download, safeFileName, uid, pickFiles, toKana } from './utils';
 import { openChat, startNewChat } from './generate';
 import { newLorebook, newWorldEntry } from './defaults';
 import { confirmDialog } from '../components/ui';
+import { t } from './i18n';
 
 export function toggleNight() {
   const mode = isNight() ? 'day' : 'night';
@@ -41,10 +42,10 @@ export async function importCharacterFile(file: File): Promise<Character | null>
   let avatarBlob: Blob | null = null;
   if (isPng(bytes)) {
     json = extractCardJson(bytes);
-    if (!json) throw new Error(`В «${file.name}» нет данных карточки`);
+    if (!json) throw new Error(t('“{name}” has no card data', { name: file.name }));
     avatarBlob = file;
   } else if (/\.(webp|jpe?g)$/i.test(file.name)) {
-    throw new Error('Карточки бывают только в PNG или JSON');
+    throw new Error(t('Cards come only as PNG or JSON'));
   } else {
     json = JSON.parse(new TextDecoder().decode(bytes));
   }
@@ -73,7 +74,7 @@ export async function importCharactersInteractive() {
       toastError(err, f.name);
     }
   }
-  if (ok) toast(ok === 1 && last ? `Персонаж «${last.name}» импортирован` : `Импортировано персонажей: ${ok}`);
+  if (ok) toast(ok === 1 && last ? t('Character “{name}” imported', { name: last.name }) : t('Characters imported: {ok}', { ok }));
   return last;
 }
 
@@ -81,10 +82,10 @@ export async function importCharacterFromUrl(url: string) {
   try {
     const file = await api.importUrl(url);
     const c = await importCharacterFile(file);
-    if (c) toast(`Персонаж «${c.name}» импортирован`);
+    if (c) toast(t('Character “{name}” imported', { name: c.name }));
     return c;
   } catch (err) {
-    toastError(err, 'Импорт по ссылке');
+    toastError(err, t('Import from a link'));
     return null;
   }
 }
@@ -107,15 +108,15 @@ export async function exportCharacter(c: Character, format: 'png' | 'json') {
 }
 
 export async function duplicateCharacter(c: Character) {
-  const copy = { ...structuredClone(c), id: uid(), name: `${c.name} (копия)`, createdAt: Date.now() };
+  const copy = { ...structuredClone(c), id: uid(), name: t('{name} (copy)', { name: c.name }), createdAt: Date.now() };
   upsert('characters', copy);
   for (const r of scopedRegex(c.id)) upsert('regex', { ...r, id: uid(), scope: { type: 'character', id: copy.id } });
-  toast('Копия создана');
+  toast(t('Copy created'));
   return copy;
 }
 
 export async function deleteCharacter(c: Character) {
-  const ok = await confirmDialog(`Удалить «${c.name}» и все его чаты? Это нельзя отменить (но есть автобэкап).`, { ok: 'Удалить' });
+  const ok = await confirmDialog(t("Delete “{name}” and all its chats? This can't be undone (but there is an automatic backup).", { name: c.name }), { ok: t('Delete') });
   if (!ok) return false;
   try {
     await removeItem('characters', c.id, true);
@@ -123,7 +124,7 @@ export async function deleteCharacter(c: Character) {
     const s = getState();
     if (s.chat?.ownerType === 'character' && s.chat.ownerId === c.id) setState({ chat: null, chatList: [] });
     if (s.settings.activeCharacterId === c.id) updateSettings({ activeCharacterId: '', activeChatId: '' });
-    toast(`«${c.name}» удалён`);
+    toast(t('“{name}” deleted', { name: c.name }));
     return true;
   } catch (err) {
     toastError(err);
@@ -142,7 +143,7 @@ export async function importLorebooksInteractive(): Promise<Lorebook | null> {
       const book = lorebookFromJson(json, f.name.replace(/\.json$/i, ''));
       upsert('worlds', book);
       last = book;
-      toast(`Лорбук «${book.name}» · ${book.entries.length} записей`);
+      toast(t('Lorebook “{name}” · {n} entries', { name: book.name, n: book.entries.length }));
     } catch (err) {
       toastError(err, f.name);
     }
@@ -162,15 +163,15 @@ export async function importPresetsInteractive() {
     try {
       const json = JSON.parse(await f.text());
       if (json?.input_sequence !== undefined || json?.instruct?.input_sequence !== undefined) {
-        const t = instructFromJson(json);
-        upsert('instruct', t);
-        toast(`Шаблон instruct «${t.name}» добавлен`);
+        const tpl = instructFromJson(json);
+        upsert('instruct', tpl);
+        toast(t('Instruct template “{name}” added', { name: tpl.name }));
         continue;
       }
       const p = json?.cream_soda ? presetFromJson(json.cream_soda) : presetFromJson(json, f.name.replace(/\.json$/i, ''));
       upsert('presets', p);
       updateSettings({ activePresetId: p.id });
-      toast(`Пресет «${p.name}» импортирован`);
+      toast(t('Preset “{name}” imported', { name: p.name }));
     } catch (err) {
       toastError(err, f.name);
     }
@@ -198,7 +199,7 @@ export async function importRegexInteractive(scope?: { type: 'character'; id: st
       toastError(err, f.name);
     }
   }
-  if (n) toast(`Импортировано регексов: ${n}`);
+  if (n) toast(t('Regexes imported: {n}', { n }));
 }
 
 export function exportRegex(ids?: string[]) {
@@ -217,11 +218,11 @@ export async function importChatInteractive() {
       ? { type: 'character' as const, id: s.settings.activeCharacterId }
       : null;
   if (!owner) {
-    toast('Сначала откройте чат с персонажем — импортированный чат будет привязан к нему', 'warn');
+    toast(t('Open a chat with a character first: the imported chat will be attached to it'), 'warn');
     return;
   }
   const files = await pickFiles('.jsonl,.json', true);
-  const charName = s.characters.find((c) => c.id === owner.id)?.name || s.groups.find((g) => g.id === owner.id)?.name || 'Персонаж';
+  const charName = s.characters.find((c) => c.id === owner.id)?.name || s.groups.find((g) => g.id === owner.id)?.name || t('Character');
   for (const f of files) {
     try {
       const text = await f.text();
@@ -232,7 +233,7 @@ export async function importChatInteractive() {
       chat.title = f.name.replace(/\.(jsonl|json)$/i, '');
       await api.putChat(chat);
       await openChat(chat.id);
-      toast(`Чат «${chat.title}» импортирован · ${chat.messages.length} сообщений`);
+      toast(t('Chat “{title}” imported · {n} messages', { title: chat.title, n: chat.messages.length }));
     } catch (err) {
       toastError(err, f.name);
     }
@@ -264,7 +265,7 @@ export async function exportAllChats() {
 }
 
 export async function deleteChat(chatId: string) {
-  const ok = await confirmDialog('Удалить этот чат? Ветки, созданные из него, останутся.', { ok: 'Удалить' });
+  const ok = await confirmDialog(t('Delete this chat? Branches made from it will stay.'), { ok: t('Delete') });
   if (!ok) return false;
   await api.removeChat(chatId);
   const s = getState();
@@ -299,7 +300,7 @@ export async function importPersonasInteractive() {
         continue;
       }
       for (const p of personaFromJson(JSON.parse(await f.text()))) upsert('personas', p);
-      toast('Персоны импортированы');
+      toast(t('Personas imported'));
     } catch (err) {
       toastError(err, f.name);
     }
@@ -318,24 +319,24 @@ export async function importThemesInteractive() {
     try {
       const text = await f.text();
       if (f.name.endsWith('.css')) {
-        const base = getState().themes.find((t) => t.id === getState().settings.theme.dayId) || getState().themes[0];
-        const t: Theme = { ...structuredClone(base), id: uid(), name: f.name.replace(/\.css$/, ''), builtin: false, css: { theme: text, chat: '', mobile: '' } };
-        upsert('themes', t);
+        const base = getState().themes.find((th) => th.id === getState().settings.theme.dayId) || getState().themes[0];
+        const imported: Theme = { ...structuredClone(base), id: uid(), name: f.name.replace(/\.css$/, ''), builtin: false, css: { theme: text, chat: '', mobile: '' } };
+        upsert('themes', imported);
       } else {
         const json = JSON.parse(text);
-        if (!json.tokens) throw new Error('В файле нет токенов темы');
+        if (!json.tokens) throw new Error(t('The file has no theme tokens'));
         upsert('themes', { ...json, id: uid(), builtin: false });
       }
-      toast('Тема импортирована');
+      toast(t('Theme imported'));
     } catch (err) {
       toastError(err, f.name);
     }
   }
 }
 
-export function exportTheme(t: Theme) {
-  const { builtin, ...rest } = t;
-  download(`${safeFileName(t.name)}.json`, JSON.stringify(rest, null, 2), 'application/json');
+export function exportTheme(theme: Theme) {
+  const { builtin, ...rest } = theme;
+  download(`${safeFileName(theme.name)}.json`, JSON.stringify(rest, null, 2), 'application/json');
 }
 
 // ───────── Memory Book ─────────
@@ -349,8 +350,8 @@ export function exportMemory(chat: Chat, format: 'json' | 'md') {
   const md = [
     `# Memory Book · ${chat.title}`,
     '',
-    ...mem.chapters.map((c, i) => `## Глава ${i + 1} · ${c.title}\n\n${c.summary}\n\nКлючи: ${c.keys.join(', ')}\n`),
-    '## Факты',
+    ...mem.chapters.map((c, i) => t('## Chapter {i} · {title}\n\n{summary}\n\nKeys: {keys}\n', { i: i + 1, title: c.title, summary: c.summary, keys: c.keys.join(', ') })),
+    t('## Facts'),
     '',
     ...mem.facts.map((f) => `- ${f.text}`),
   ].join('\n');
@@ -362,27 +363,27 @@ export async function importMemoryInteractive() {
   if (!f || !getState().chat) return;
   try {
     const mem = JSON.parse(await f.text()) as MemoryBook;
-    if (!Array.isArray(mem.chapters)) throw new Error('Нет глав');
+    if (!Array.isArray(mem.chapters)) throw new Error(t('No chapters'));
     setChat((c) => ({ ...c, meta: { ...c.meta, memory: { chapters: [...c.meta.memory.chapters, ...mem.chapters], facts: [...c.meta.memory.facts, ...(mem.facts || [])] } } }));
-    toast('Memory Book импортирован');
+    toast(t('Memory Book imported'));
   } catch (err) {
     toastError(err);
   }
 }
 
-/** «Экспорт в лорбук»: chapters become keyed lorebook entries. */
+/** «Export to a lorebook»: chapters become keyed lorebook entries. */
 export function memoryToLorebook(chat: Chat) {
   const book = newLorebook({
-    name: `Память · ${chat.title}`,
+    name: t('Memory · {title}', { title: chat.title }),
     entries: [
       ...chat.meta.memory.chapters.map((c, i) =>
-        newWorldEntry({ comment: `Глава ${i + 1} · ${c.title}`, keys: c.keys.length ? c.keys : [c.title], content: c.summary, order: 100 + c.importance * 10, constant: c.insertion === 'always' }),
+        newWorldEntry({ comment: t('Chapter {i} · {title}', { i: i + 1, title: c.title }), keys: c.keys.length ? c.keys : [c.title], content: c.summary, order: 100 + c.importance * 10, constant: c.insertion === 'always' }),
       ),
       ...chat.meta.memory.facts.filter((f) => f.enabled).map((f) => newWorldEntry({ comment: f.text.slice(0, 40), constant: true, content: f.text })),
     ],
   });
   upsert('worlds', book);
-  toast(`Создан лорбук «${book.name}»`);
+  toast(t('Lorebook “{name}” created', { name: book.name }));
   return book;
 }
 
@@ -414,14 +415,14 @@ export async function downloadBackup(includeKeys: boolean) {
 export async function restoreBackupInteractive() {
   const [f] = await pickFiles('.zip,application/zip');
   if (!f) return;
-  const ok = await confirmDialog('Восстановить данные из бэкапа? Текущее состояние сохранится в отдельный бэкап, затем приложение перезагрузится.', { ok: 'Восстановить' });
+  const ok = await confirmDialog(t('Restore data from the backup? The current state will be saved to a separate backup, then the app reloads.'), { ok: t('Restore') });
   if (!ok) return;
   try {
     const r = await api.restore(f);
-    toast(`Восстановлено файлов: ${r.restored}. Перезагружаю…`);
+    toast(t('Files restored: {restored}. Reloading…', { restored: r.restored }));
     setTimeout(() => location.reload(), 1200);
   } catch (err) {
-    toastError(err, 'Восстановление');
+    toastError(err, t('Restoring'));
   }
 }
 

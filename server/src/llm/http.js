@@ -42,7 +42,7 @@ function dispatcherFor(proxy) {
   } else if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
     dispatcher = new ProxyAgent(url);
   } else {
-    throw new Error(`Неподдерживаемый прокси: ${parsed.protocol}`);
+    throw new Error(`Unsupported proxy: ${parsed.protocol}`);
   }
   dispatchers.set(url, dispatcher);
   return dispatcher;
@@ -74,17 +74,17 @@ export async function upstreamFetch(url, { method = 'GET', headers = {}, body, s
   } catch (err) {
     if (timer) clearTimeout(timer);
     if (controller.signal.reason?.message === 'timeout') {
-      const e = new Error(`Таймаут ${Math.round(timeoutMs / 1000)} с: сервер не ответил`);
+      const e = new Error(`Timed out after ${Math.round(timeoutMs / 1000)} s: the server did not answer`);
       e.status = 504;
       throw e;
     }
     if (signal?.aborted) {
-      const e = new Error('Запрос отменён');
+      const e = new Error('Request cancelled');
       e.status = 499;
       e.aborted = true;
       throw e;
     }
-    const e = new Error(`Не удалось подключиться: ${err.cause?.message || err.message}`);
+    const e = new Error(`Could not connect: ${err.cause?.message || err.message}`);
     e.status = 502;
     throw e;
   } finally {

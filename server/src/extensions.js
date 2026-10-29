@@ -18,16 +18,16 @@ function run(cmd, args, cwd, timeoutMs = 120000) {
     child.stderr.on('data', (d) => (out += d));
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(httpError(504, `${cmd}: превышено время ожидания`));
+      reject(httpError(504, `${cmd}: timed out`));
     }, timeoutMs);
     child.on('error', (err) => {
       clearTimeout(timer);
-      reject(httpError(500, err.code === 'ENOENT' ? 'Git не найден. Установите git, чтобы ставить расширения по ссылке.' : err.message));
+      reject(httpError(500, err.code === 'ENOENT' ? 'Git not found. Install git to add extensions from a link.' : err.message));
     });
     child.on('close', (code) => {
       clearTimeout(timer);
       if (code === 0) resolve(out);
-      else reject(httpError(500, out.trim().split('\n').slice(-3).join('\n') || `${cmd} завершился с кодом ${code}`));
+      else reject(httpError(500, out.trim().split('\n').slice(-3).join('\n') || `${cmd} exited with code ${code}`));
     });
   });
 }
@@ -43,7 +43,7 @@ export class Extensions {
   }
 
   dirOf(name) {
-    if (!/^[A-Za-z0-9_\-.]{1,64}$/.test(name) || name.startsWith('.')) throw httpError(400, 'Некорректное имя расширения');
+    if (!/^[A-Za-z0-9_\-.]{1,64}$/.test(name) || name.startsWith('.')) throw httpError(400, 'Invalid extension name');
     return path.join(this.dir, name);
   }
 
@@ -77,22 +77,22 @@ export class Extensions {
 
   async install(url) {
     const u = String(url || '').trim();
-    if (!/^(https?:\/\/|git@)[\w.@:/\-~]+$/.test(u)) throw httpError(400, 'Нужна ссылка на git-репозиторий (https://…)');
+    if (!/^(https?:\/\/|git@)[\w.@:/\-~]+$/.test(u)) throw httpError(400, 'A link to a git repository is needed (https://…)');
     await fsp.mkdir(this.dir, { recursive: true });
     const name = nameFromUrl(u);
     const target = this.dirOf(name);
-    if (fs.existsSync(target)) throw httpError(409, `Расширение «${name}» уже установлено`);
+    if (fs.existsSync(target)) throw httpError(409, `Extension "${name}" is already installed`);
     await run('git', ['clone', '--depth', '1', u, target], this.dir);
     if (!fs.existsSync(path.join(target, 'manifest.json'))) {
       await fsp.rm(target, { recursive: true, force: true });
-      throw httpError(400, 'В репозитории нет manifest.json — это не расширение');
+      throw httpError(400, 'The repository has no manifest.json, so it is not an extension');
     }
     return (await this.list()).find((e) => e.name === name);
   }
 
   async update(name) {
     const dir = this.dirOf(name);
-    if (!fs.existsSync(path.join(dir, '.git'))) throw httpError(400, 'Расширение установлено не через git');
+    if (!fs.existsSync(path.join(dir, '.git'))) throw httpError(400, 'The extension was not installed with git');
     const out = await run('git', ['pull', '--ff-only'], dir);
     return { output: out.trim() };
   }

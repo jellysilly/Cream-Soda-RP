@@ -1,4 +1,5 @@
 import type { Chat, ChatSummary, ConnectionProfile, ExtensionInfo, ModelInfo, RequestLogItem, SystemInfo } from './types';
+import { t } from './i18n';
 
 export class ApiError extends Error {
   status: number;
@@ -23,7 +24,7 @@ async function request<T>(method: string, url: string, body?: unknown, init: Req
     res = await fetch(url, { method, headers, body: payload, credentials: 'same-origin', ...init });
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err;
-    throw new ApiError('Сервер Cream Soda не отвечает. Он запущен?', 0);
+    throw new ApiError(t('The Cream Soda server is not answering. Is it running?'), 0);
   }
   if (!res.ok) {
     let msg = `${res.status} ${res.statusText}`;
@@ -138,7 +139,7 @@ export async function* streamGenerate(body: Record<string, unknown>, signal: Abo
     });
   } catch (err) {
     if ((err as Error).name === 'AbortError') return;
-    throw new ApiError('Сервер Cream Soda не отвечает', 0);
+    throw new ApiError(t('The Cream Soda server is not answering'), 0);
   }
   if (!res.ok) {
     let msg = `${res.status}`;

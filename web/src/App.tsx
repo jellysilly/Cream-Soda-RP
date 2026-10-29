@@ -8,6 +8,7 @@ import { DialogHost } from './components/ui';
 import { ChatPage } from './pages/chat/ChatPage';
 import { loadExtensions } from './lib/extensions';
 import { Icon } from './components/Icon';
+import { t } from './lib/i18n';
 
 const LibraryPage = lazy(() => import('./pages/library/LibraryPage'));
 const PresetsPage = lazy(() => import('./pages/presets/PresetsPage'));
@@ -23,10 +24,10 @@ function useThemeSync() {
   // Re-evaluate «auto» day/night every few minutes.
   const [, tick] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => tick((n) => n + 1), 5 * 60 * 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => tick((n) => n + 1), 5 * 60 * 1000);
+    return () => clearInterval(timer);
   }, []);
-  const theme = useStore((s) => s.themes.find((t) => t.id === themeId) || s.themes[0]);
+  const theme = useStore((s) => s.themes.find((th) => th.id === themeId) || s.themes[0]);
   const customCss = useStore((s) => s.settings.theme.customCss);
   useEffect(() => {
     if (theme) applyTheme(theme, { customCss });
@@ -66,10 +67,10 @@ export function App() {
     return (
       <div className="cs-boot">
         <img src="./cream-soda-icon.svg" width="96" height="96" alt="" />
-        <strong style={{ color: 'var(--cs-text)', fontSize: 18 }}>Не удалось подключиться к серверу</strong>
+        <strong style={{ color: 'var(--cs-text)', fontSize: 18 }}>{t('Could not connect to the server')}</strong>
         <span>{bootError}</span>
         <button type="button" className="cs-btn cs-btn--primary" onClick={() => location.reload()}>
-          Попробовать снова
+          {t('Try again')}
         </button>
       </div>
     );
@@ -78,7 +79,7 @@ export function App() {
     return (
       <div className="cs-boot" role="status">
         <img src="./cream-soda-icon-animated.svg" width="120" height="120" alt="" />
-        <span>Наливаю крем-соду…</span>
+        <span>{t('Pouring the cream soda…')}</span>
       </div>
     );
   }
@@ -91,7 +92,7 @@ export function App() {
         {isSafeMode() ? (
           <div className="cs-safe-banner">
             <Icon name="warn" size={16} />
-            Безопасный режим: свой CSS отключён.
+            {t('Safe mode: custom CSS is off.')}
             <button
               type="button"
               className="cs-btn cs-btn--xs"
@@ -100,7 +101,7 @@ export function App() {
                 location.href = location.pathname + location.hash;
               }}
             >
-              Выйти
+              {t('Exit')}
             </button>
           </div>
         ) : null}

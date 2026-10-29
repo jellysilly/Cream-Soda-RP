@@ -56,6 +56,21 @@ export function resolvePaths(dataRoot, profile) {
   };
 }
 
+/**
+ * Interface language of a profile (Settings → General in the app), for the
+ * launchers: 'ru' or 'en' (the default for new profiles).
+ */
+export function profileLanguage(dataRoot, profile) {
+  try {
+    const settings = JSON.parse(fs.readFileSync(path.join(resolvePaths(dataRoot, profile).profileDir, 'settings.json'), 'utf8'));
+    if (settings?.language === 'ru' || settings?.language === 'en') return settings.language;
+    // Saved before languages existed, by the Russian-only interface (same rule as the web app).
+    return settings && Object.keys(settings).length ? 'ru' : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
 export function listProfiles(dataRoot) {
   const dir = path.join(path.resolve(dataRoot), 'profiles');
   try {

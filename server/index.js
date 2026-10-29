@@ -74,11 +74,11 @@ export async function startServer(options = {}) {
     await new Promise((r) => old.close(() => r()));
     server = await listen(host, state.port);
     state.host = host;
-    console.log(`[server] доступ из сети ${enabled ? 'включён' : 'выключен'}`);
+    console.log(`[server] network access ${enabled ? 'on' : 'off'}`);
   };
 
   const url = `http://127.0.0.1:${state.port}`;
-  console.log(`[server] Cream Soda ${VERSION} · профиль «${paths.profile}» · ${url}${state.lan ? ' · доступ из сети включён' : ''}`);
+  console.log(`[server] Cream Soda ${VERSION} · profile "${paths.profile}" · ${url}${state.lan ? ' · network access on' : ''}`);
 
   ctx.autoBackup();
   const backupTimer = setInterval(() => ctx.autoBackup(), 6 * 3600 * 1000);

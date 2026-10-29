@@ -81,7 +81,7 @@ function extract(json) {
     else text += part.text || '';
   }
   if (!cand && json.promptFeedback?.blockReason) {
-    const e = new Error(`Запрос заблокирован фильтром Google: ${json.promptFeedback.blockReason}`);
+    const e = new Error(`Request blocked by Google's filter: ${json.promptFeedback.blockReason}`);
     e.status = 400;
     throw e;
   }
@@ -97,7 +97,7 @@ export async function* parseStream(res) {
       continue;
     }
     if (json.error) {
-      const e = new Error(json.error.message || 'Ошибка Google AI');
+      const e = new Error(json.error.message || 'Google AI error');
       e.status = json.error.code || 500;
       throw e;
     }

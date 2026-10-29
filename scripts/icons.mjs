@@ -19,7 +19,7 @@ try {
   // CommonJS resolution also honours NODE_PATH, so a global Playwright works too.
   ({ chromium } = createRequire(import.meta.url)('playwright'));
 } catch {
-  console.error('Нужен Playwright: npm i -D playwright && npx playwright install chromium');
+  console.error('Playwright is needed: npm i -D playwright && npx playwright install chromium');
   process.exit(1);
 }
 

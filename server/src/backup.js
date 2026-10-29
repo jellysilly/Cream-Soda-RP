@@ -46,9 +46,9 @@ export async function restoreBackup(paths, secrets, buffer) {
   try {
     entries = unzipSync(new Uint8Array(buffer));
   } catch {
-    throw httpError(400, 'Файл не похож на zip-архив');
+    throw httpError(400, 'The file does not look like a zip archive');
   }
-  if (!entries['cream-soda-backup.json']) throw httpError(400, 'Это не бэкап Cream Soda');
+  if (!entries['cream-soda-backup.json']) throw httpError(400, 'This is not a Cream Soda backup');
   // Keep a safety copy of the current state before overwriting anything.
   await saveBackupFile(paths, await createBackup(paths, secrets), 'before-restore');
   const root = path.resolve(paths.profileDir);
@@ -90,9 +90,9 @@ export async function listBackups(paths) {
 }
 
 export function backupPath(paths, name) {
-  if (!/^[\w\-.]+\.zip$/.test(name)) throw httpError(400, 'Некорректное имя бэкапа');
+  if (!/^[\w\-.]+\.zip$/.test(name)) throw httpError(400, 'Invalid backup name');
   const full = path.join(paths.backupsDir, name);
-  if (!fs.existsSync(full)) throw httpError(404, 'Бэкап не найден');
+  if (!fs.existsSync(full)) throw httpError(404, 'Backup not found');
   return full;
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "Cream Soda",
   "short_name": "Cream Soda",
-  "lang": "ru",
+  "lang": "en",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#FBE2EC",

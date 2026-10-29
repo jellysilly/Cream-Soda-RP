@@ -48,7 +48,7 @@ export function pickPath(obj, expr) {
 }
 
 async function toImageBuffer(value, opts) {
-  if (value == null) throw new Error('В ответе не найдено изображение — проверьте путь к картинке');
+  if (value == null) throw new Error('No image found in the response: check the image path');
   if (typeof value === 'object' && value.url) value = value.url;
   if (typeof value === 'object' && value.b64_json) value = value.b64_json;
   const s = String(value);
@@ -82,7 +82,7 @@ async function generateOne(cfg, key, params, opts) {
   const v = vars(params);
   const headers = { 'Content-Type': 'application/json', ...authHeaders(key) };
   const endpoint = String(cfg.endpoint || '').trim();
-  if (!endpoint) throw new Error('Не указан endpoint генератора изображений');
+  if (!endpoint) throw new Error('The image generator endpoint is not set');
 
   switch (cfg.format) {
     case 'a1111': {
@@ -114,7 +114,7 @@ async function generateOne(cfg, key, params, opts) {
       try {
         workflow = JSON.parse(fillTemplate(cfg.workflow || cfg.bodyTemplate || '{}', v));
       } catch {
-        throw new Error('Workflow ComfyUI не является корректным JSON');
+        throw new Error('The ComfyUI workflow is not valid JSON');
       }
       const clientId = `cream-soda-${Date.now()}`;
       const res = await upstreamFetch(joinUrl(base, 'prompt'), {
@@ -127,13 +127,13 @@ async function generateOne(cfg, key, params, opts) {
       const { prompt_id: promptId } = await res.json();
       const deadline = Date.now() + 10 * 60 * 1000;
       while (Date.now() < deadline) {
-        if (opts.signal?.aborted) throw new Error('Отменено');
+        if (opts.signal?.aborted) throw new Error('Cancelled');
         await new Promise((r) => setTimeout(r, 1200));
         const h = await upstreamFetch(joinUrl(base, `history/${promptId}`), { headers, ...opts });
         if (!h.ok) continue;
         const hist = (await h.json())[promptId];
         if (!hist) continue;
-        if (hist.status?.status_str === 'error') throw new Error('ComfyUI сообщил об ошибке выполнения workflow');
+        if (hist.status?.status_str === 'error') throw new Error('ComfyUI reported an error while running the workflow');
         const images = Object.values(hist.outputs || {}).flatMap((o) => o.images || []);
         if (!images.length) continue;
         const out = [];
@@ -145,7 +145,7 @@ async function generateOne(cfg, key, params, opts) {
         }
         return out;
       }
-      throw new Error('ComfyUI не вернул картинку за 10 минут');
+      throw new Error('ComfyUI returned no image within 10 minutes');
     }
     case 'openai': {
       const url = /\/images\/generations\/?$/.test(endpoint) ? endpoint : joinUrl(endpoint, 'images/generations');
@@ -162,7 +162,7 @@ async function generateOne(cfg, key, params, opts) {
       try {
         JSON.parse(bodyText);
       } catch {
-        throw new Error('Тело запроса после подстановки не является корректным JSON');
+        throw new Error('The request body is not valid JSON after substitution');
       }
       const res = await upstreamFetch(endpoint, { method: cfg.method || 'POST', headers, body: bodyText, ...opts });
       if (!res.ok) throw await readErrorBody(res);
@@ -191,7 +191,7 @@ export async function testImageApi(cfg, key) {
   const started = Date.now();
   const headers = authHeaders(key);
   const endpoint = String(cfg.endpoint || '').trim();
-  if (!endpoint) return { ok: false, error: 'Не указан endpoint' };
+  if (!endpoint) return { ok: false, error: 'The endpoint is not set' };
   let url = endpoint;
   if (cfg.format === 'a1111') url = joinUrl(endpoint.replace(/\/sdapi\/v1\/txt2img\/?$/, ''), 'sdapi/v1/sd-models');
   else if (cfg.format === 'comfy') url = joinUrl(endpoint.replace(/\/prompt\/?$/, ''), 'system_stats');

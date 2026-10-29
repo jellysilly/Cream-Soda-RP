@@ -1,4 +1,5 @@
 import type { ChatMessage } from './types';
+import { t } from './i18n';
 
 /**
  * SillyTavern-compatible macro engine: {{user}}, {{char}}, {{random::a::b}},
@@ -45,10 +46,10 @@ function hashString(s: string): number {
 }
 
 function seededRandom(seed: number) {
-  let t = seed + 0x6d2b79f5;
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  let m = seed + 0x6d2b79f5;
+  m = Math.imul(m ^ (m >>> 15), m | 1);
+  m ^= m + Math.imul(m ^ (m >>> 7), m | 61);
+  return ((m ^ (m >>> 14)) >>> 0) / 4294967296;
 }
 
 function splitList(raw: string): string[] {
@@ -79,13 +80,15 @@ function lastBy(messages: ChatMessage[] | undefined, pred: (m: ChatMessage) => b
   return '';
 }
 
+/** For {{idle_duration}}: English, like everything else that reaches the model. */
 function humanizeDuration(ms: number): string {
   const min = Math.round(ms / 60000);
-  if (min < 1) return 'только что';
-  if (min < 60) return `${min} мин`;
+  if (min < 1) return 'just now';
+  const unit = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  if (min < 60) return unit(min, 'minute');
   const h = Math.round(min / 60);
-  if (h < 24) return `${h} ч`;
-  return `${Math.round(h / 24)} дн`;
+  if (h < 24) return unit(h, 'hour');
+  return unit(Math.round(h / 24), 'day');
 }
 
 function formatDate(fmt: string, d = new Date()): string {
@@ -99,10 +102,10 @@ function formatDate(fmt: string, d = new Date()): string {
     hh: pad(d.getHours() % 12 || 12),
     mm: pad(d.getMinutes()),
     ss: pad(d.getSeconds()),
-    dddd: d.toLocaleDateString('ru-RU', { weekday: 'long' }),
-    MMMM: d.toLocaleDateString('ru-RU', { month: 'long' }),
+    dddd: d.toLocaleDateString('en-US', { weekday: 'long' }),
+    MMMM: d.toLocaleDateString('en-US', { month: 'long' }),
   };
-  return fmt.replace(/YYYY|YY|MMMM|MM|DD|dddd|HH|hh|mm|ss/g, (t) => map[t] ?? t);
+  return fmt.replace(/YYYY|YY|MMMM|MM|DD|dddd|HH|hh|mm|ss/g, (token) => map[token] ?? token);
 }
 
 function varOp(store: Record<string, string> | undefined, op: string, name: string, value: string, env: MacroEnv): string {
@@ -188,12 +191,12 @@ export function substituteMacros(input: string, env: MacroEnv): string {
     currentswipeid: () => String((messages[messages.length - 1]?.swipeId ?? 0) + 1),
     lastswipeid: () => String(messages[messages.length - 1]?.swipes.length ?? 0),
     lastgenerationtype: () => env.lastGenerationType || 'normal',
-    time: () => now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-    date: () => now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
-    weekday: () => now.toLocaleDateString('ru-RU', { weekday: 'long' }),
+    time: () => now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    date: () => now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+    weekday: () => now.toLocaleDateString('en-US', { weekday: 'long' }),
     isotime: () => formatDate('HH:mm', now),
     isodate: () => formatDate('YYYY-MM-DD', now),
-    idle_duration: () => (env.idleSince ? humanizeDuration(Date.now() - env.idleSince) : 'только что'),
+    idle_duration: () => (env.idleSince ? humanizeDuration(Date.now() - env.idleSince) : 'just now'),
     newline: () => '\n',
     noop: () => '',
     space: () => ' ',
@@ -242,20 +245,20 @@ export function substituteMacros(input: string, env: MacroEnv): string {
 }
 
 export const MACRO_HELP: { name: string; desc: string }[] = [
-  { name: '{{user}}', desc: 'имя персоны игрока' },
-  { name: '{{char}}', desc: 'имя персонажа' },
-  { name: '{{description}} · {{personality}} · {{scenario}}', desc: 'поля карточки' },
-  { name: '{{persona}}', desc: 'описание персоны' },
-  { name: '{{mesExamples}}', desc: 'примеры диалогов' },
-  { name: '{{lastMessage}} · {{lastUserMessage}} · {{lastCharMessage}}', desc: 'последние сообщения' },
-  { name: '{{time}} · {{date}} · {{weekday}}', desc: 'текущие время и дата' },
-  { name: '{{random::а::б::в}}', desc: 'случайный вариант при каждой генерации' },
-  { name: '{{pick::а::б}}', desc: 'вариант, стабильный в рамках чата' },
-  { name: '{{roll:2d6+1}}', desc: 'бросок кубиков' },
-  { name: '{{setvar::имя::значение}} · {{getvar::имя}}', desc: 'переменные чата' },
-  { name: '{{addvar::имя::1}} · {{incvar::имя}} · {{decvar::имя}}', desc: 'арифметика переменных' },
-  { name: '{{setglobalvar::…}} · {{getglobalvar::…}}', desc: 'глобальные переменные' },
-  { name: '{{idle_duration}}', desc: 'сколько прошло с последнего сообщения' },
-  { name: '{{// комментарий}}', desc: 'удаляется из промпта' },
-  { name: '{{trim}} · {{newline}}', desc: 'управление пробелами' },
+  { name: '{{user}}', desc: t("player's persona name") },
+  { name: '{{char}}', desc: t('character name') },
+  { name: '{{description}} · {{personality}} · {{scenario}}', desc: t('card fields') },
+  { name: '{{persona}}', desc: t('persona description') },
+  { name: '{{mesExamples}}', desc: t('dialogue examples') },
+  { name: '{{lastMessage}} · {{lastUserMessage}} · {{lastCharMessage}}', desc: t('latest messages') },
+  { name: '{{time}} · {{date}} · {{weekday}}', desc: t('current time and date') },
+  { name: t('{{random::a::b::c}}'), desc: t('a random option on every generation') },
+  { name: t('{{pick::a::b}}'), desc: t('an option that stays the same within the chat') },
+  { name: '{{roll:2d6+1}}', desc: t('dice roll') },
+  { name: t('{{setvar::name::value}} · {{getvar::name}}'), desc: t('chat variables') },
+  { name: t('{{addvar::name::1}} · {{incvar::name}} · {{decvar::name}}'), desc: t('variable arithmetic') },
+  { name: '{{setglobalvar::…}} · {{getglobalvar::…}}', desc: t('global variables') },
+  { name: '{{idle_duration}}', desc: t('time since the last message') },
+  { name: t('{{// comment}}'), desc: t('removed from the prompt') },
+  { name: '{{trim}} · {{newline}}', desc: t('whitespace control') },
 ];

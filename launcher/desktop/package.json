@@ -2,7 +2,7 @@
   "name": "cream-soda-launcher",
   "productName": "Cream Soda",
   "version": "1.4.2",
-  "description": "Лаунчер Cream Soda: движок, сервер и интерфейс в одном окне",
+  "description": "Cream Soda launcher: the engine, the server and the interface in one window",
   "private": true,
   "type": "module",
   "main": "main.mjs",

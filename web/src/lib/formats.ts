@@ -20,6 +20,7 @@ import type {
 } from './types';
 import { newCharacter, newChat, newLorebook, newPreset, newRegex, newWorldEntry, DEFAULT_SAMPLERS, DEFAULT_UTILITY, newPersona } from './defaults';
 import { uid } from './utils';
+import { locale, t } from './i18n';
 
 const str = (v: unknown, d = '') => (typeof v === 'string' ? v : v == null ? d : String(v));
 const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : Number.isFinite(Number(v)) && v !== '' && v !== null ? Number(v) : d);
@@ -33,7 +34,7 @@ const roleToNum = (r: Role) => (r === 'user' ? 1 : r === 'assistant' ? 2 : 0);
 export function entryFromST(e: any): WorldEntry {
   return newWorldEntry({
     uid: str(e.uid ?? e.id ?? uid()),
-    comment: str(e.comment || e.name || (arr(e.key || e.keys)[0] ?? 'Запись')),
+    comment: str(e.comment || e.name || (arr(e.key || e.keys)[0] ?? t('Entry'))),
     keys: arr(e.key ?? e.keys),
     secondaryKeys: arr(e.keysecondary ?? e.secondary_keys),
     selectiveLogic: (num(e.selectiveLogic ?? e.extensions?.selectiveLogic, 0) as WILogic) || 0,
@@ -114,7 +115,7 @@ function entryFromBook(e: any, i: number): WorldEntry {
   const ext = e.extensions || {};
   return newWorldEntry({
     uid: str(e.id ?? i),
-    comment: str(e.comment || e.name || arr(e.keys)[0] || `Запись ${i + 1}`),
+    comment: str(e.comment || e.name || arr(e.keys)[0] || t('Entry {i}', { i: i + 1 })),
     keys: arr(e.keys),
     secondaryKeys: arr(e.secondary_keys),
     selectiveLogic: num(ext.selectiveLogic, 0) as WILogic,
@@ -181,7 +182,7 @@ function entryToBook(e: WorldEntry, i: number): any {
 
 // ───────── Lorebooks ─────────
 
-export function lorebookFromJson(json: any, fallbackName = 'Лорбук'): Lorebook {
+export function lorebookFromJson(json: any, fallbackName = t('Lorebook')): Lorebook {
   // ST world file: { entries: { "0": {...} } } · card book: { entries: [...] } · Novel/Agnai variants
   const book = json?.data?.character_book || json?.character_book || json;
   let entries: WorldEntry[] = [];
@@ -193,7 +194,7 @@ export function lorebookFromJson(json: any, fallbackName = 'Лорбук'): Lore
     entries = book.lorebookEntries.map((e: any) =>
       newWorldEntry({ comment: str(e.displayName || e.name), keys: arr(e.keys), content: str(e.text || e.entry), enabled: e.enabled !== false }),
     );
-  } else throw new Error('Не похоже на лорбук: нет списка записей');
+  } else throw new Error(t('Does not look like a lorebook: no list of entries'));
   entries.sort((a, b) => num((a as any).extra?.displayIndex, 0) - num((b as any).extra?.displayIndex, 0));
   // Re-key uids so two imports never collide.
   entries = entries.map((e) => ({ ...e, uid: uid() }));
@@ -227,12 +228,12 @@ export interface ParsedCard {
 }
 
 export function characterFromCard(json: any): ParsedCard {
-  if (!json || typeof json !== 'object') throw new Error('Пустая карточка');
+  if (!json || typeof json !== 'object') throw new Error(t('Empty card'));
   const isV2 = json.spec === 'chara_card_v2' || json.spec === 'chara_card_v3';
   const d = isV2 ? json.data || {} : json;
   const ext = (d.extensions && typeof d.extensions === 'object' ? d.extensions : {}) as Record<string, any>;
   const cs = (ext.cream_soda || {}) as Record<string, any>;
-  if (!str(d.name || json.char_name).trim()) throw new Error('В карточке нет имени персонажа');
+  if (!str(d.name || json.char_name).trim()) throw new Error(t('The card has no character name'));
 
   const character = newCharacter({
     name: str(d.name || json.char_name),
@@ -267,8 +268,8 @@ export function characterFromCard(json: any): ParsedCard {
 
   let book: Lorebook | null = null;
   if (d.character_book && Array.isArray(d.character_book.entries) && d.character_book.entries.length) {
-    book = lorebookFromJson({ character_book: d.character_book }, `${character.name} · лорбук`);
-    if (!d.character_book.name) book.name = `${character.name} · лорбук`;
+    book = lorebookFromJson({ character_book: d.character_book }, t('{name} · lorebook', { name: character.name }));
+    if (!d.character_book.name) book.name = t('{name} · lorebook', { name: character.name });
   }
 
   const regex = Array.isArray(ext.regex_scripts)
@@ -339,7 +340,7 @@ export function characterToCardV3(c: Character, book: Lorebook | null, regex: Re
 export function regexFromST(r: any): RegexScript {
   return newRegex({
     id: uid(),
-    name: str(r.scriptName || r.name, 'Регекс'),
+    name: str(r.scriptName || r.name, t('Regex')),
     findRegex: str(r.findRegex),
     replaceString: str(r.replaceString),
     trimStrings: arr(r.trimStrings),
@@ -377,7 +378,7 @@ export function regexListFromJson(json: any): RegexScript[] {
   if (Array.isArray(json)) return json.map(regexFromST);
   if (json && Array.isArray(json.regex_scripts)) return json.regex_scripts.map(regexFromST);
   if (json && json.findRegex !== undefined) return [regexFromST(json)];
-  throw new Error('Не похоже на регекс-скрипт SillyTavern');
+  throw new Error(t('Does not look like a SillyTavern regex script'));
 }
 
 // ───────── Presets ─────────
@@ -396,21 +397,21 @@ const ST_MARKERS: Record<string, PromptBlock['marker']> = {
 };
 
 const ST_NAMES: Record<string, string> = {
-  main: 'Основной промпт',
-  nsfw: 'Вспомогательный промпт',
-  jailbreak: 'Пост-инструкция',
-  enhanceDefinitions: 'Усиление описаний',
-  charDescription: 'Описание · {{char}}',
-  charPersonality: 'Характер · {{char}}',
-  scenario: 'Сценарий',
-  personaDescription: 'Персона · {{user}}',
-  worldInfoBefore: 'Лорбук · до карточки',
-  worldInfoAfter: 'Лорбук · после карточки',
-  dialogueExamples: 'Примеры диалогов',
-  chatHistory: 'История чата',
+  main: t('Main prompt'),
+  nsfw: t('Auxiliary prompt'),
+  jailbreak: t('Post-history instruction'),
+  enhanceDefinitions: t('Enhance definitions'),
+  charDescription: t('Description · {{char}}'),
+  charPersonality: t('Personality · {{char}}'),
+  scenario: t('Scenario'),
+  personaDescription: t('Persona · {{user}}'),
+  worldInfoBefore: t('Lorebook · before the card'),
+  worldInfoAfter: t('Lorebook · after the card'),
+  dialogueExamples: t('Dialogue examples'),
+  chatHistory: t('Chat history'),
 };
 
-export function presetFromJson(json: any, name = 'Импортированный пресет'): Preset {
+export function presetFromJson(json: any, name = t('Imported preset')): Preset {
   if (json?.samplers && Array.isArray(json?.prompts)) {
     // Our own export.
     return { ...newPreset(), ...json, id: uid(), name: str(json.name, name) };
@@ -491,7 +492,7 @@ export function presetFromJson(json: any, name = 'Импортированный
       });
     }
     const prefill = str(json.assistant_prefill);
-    blocks.push({ id: 'prefill', name: 'Префилл ответа', role: 'assistant', content: prefill, enabled: !!prefill, position: 'relative', depth: 4, order: 100, builtin: true });
+    blocks.push({ id: 'prefill', name: t('Response prefill'), role: 'assistant', content: prefill, enabled: !!prefill, position: 'relative', depth: 4, order: 100, builtin: true });
     if (blocks.length) p.prompts = blocks;
   }
   return p;
@@ -553,7 +554,7 @@ export function instructFromJson(json: any): InstructTemplate {
   const j = json?.instruct || json;
   return {
     id: uid(),
-    name: str(j.name, 'Шаблон'),
+    name: str(j.name, t('Template')),
     inputSequence: str(j.input_sequence ?? j.inputSequence),
     outputSequence: str(j.output_sequence ?? j.outputSequence),
     systemSequence: str(j.system_sequence ?? j.systemSequence),
@@ -579,9 +580,9 @@ export function chatFromJsonl(text: string, owner: { type: 'character' | 'group'
     .map((l) => l.trim())
     .filter(Boolean)
     .map((l) => JSON.parse(l));
-  if (!lines.length) throw new Error('Пустой файл чата');
+  if (!lines.length) throw new Error(t('Empty chat file'));
   const header = lines[0].chat_metadata !== undefined || lines[0].user_name !== undefined ? lines.shift() : null;
-  const chat = newChat(owner.type, owner.id, `Импорт ${new Date().toLocaleDateString('ru-RU')}`);
+  const chat = newChat(owner.type, owner.id, t('Import {x}', { x: new Date().toLocaleDateString(locale()) }));
   if (header?.chat_metadata?.note_prompt) {
     chat.meta.authorNote = {
       text: str(header.chat_metadata.note_prompt),
@@ -594,12 +595,12 @@ export function chatFromJsonl(text: string, owner: { type: 'character' | 'group'
   if (header?.chat_metadata?.variables) chat.meta.variables = { ...header.chat_metadata.variables };
   chat.messages = lines.map((l: any): ChatMessage => {
     const date = parseStDate(l.send_date);
-    const swipes = Array.isArray(l.swipes) && l.swipes.length ? l.swipes.map((t: any, i: number) => ({ text: str(t), date: parseStDate(l.swipe_info?.[i]?.send_date) || date })) : [{ text: str(l.mes), date }];
+    const swipes = Array.isArray(l.swipes) && l.swipes.length ? l.swipes.map((sw: any, i: number) => ({ text: str(sw), date: parseStDate(l.swipe_info?.[i]?.send_date) || date })) : [{ text: str(l.mes), date }];
     const swipeId = Math.min(num(l.swipe_id, 0), swipes.length - 1);
     return {
       id: uid(),
       role: l.is_user ? 'user' : l.is_system ? 'system' : 'char',
-      name: str(l.name, l.is_user ? 'Ты' : owner.charName),
+      name: str(l.name, l.is_user ? 'You' : owner.charName),
       personaId: l.is_user ? personaId : undefined,
       text: str(l.mes),
       reasoning: str(l.extra?.reasoning) || undefined,
@@ -616,8 +617,8 @@ export function chatFromJsonl(text: string, owner: { type: 'character' | 'group'
 function parseStDate(v: unknown): number {
   if (typeof v === 'number') return v;
   if (!v) return Date.now();
-  const t = Date.parse(String(v).replace(/(\d+)(am|pm)/i, '$1 $2'));
-  return Number.isFinite(t) ? t : Date.now();
+  const ms = Date.parse(String(v).replace(/(\d+)(am|pm)/i, '$1 $2'));
+  return Number.isFinite(ms) ? ms : Date.now();
 }
 
 export function chatToJsonl(chat: Chat, userName: string, charName: string): string {
@@ -665,5 +666,5 @@ export function personaFromJson(json: any): Persona[] {
     );
   }
   const list = Array.isArray(json) ? json : [json];
-  return list.map((p: any) => newPersona({ ...p, id: uid(), name: str(p.name, 'Персона'), description: str(p.description) }));
+  return list.map((p: any) => newPersona({ ...p, id: uid(), name: str(p.name, t('Persona')), description: str(p.description) }));
 }

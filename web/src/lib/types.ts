@@ -393,7 +393,7 @@ export interface ChatSummary {
   size: number;
 }
 
-// ───────── Plots (сюжеты) ─────────
+// ───────── Plots ─────────
 
 export interface Plot {
   id: ID;
@@ -527,12 +527,14 @@ export interface ImageSettings {
   sampler: string;
   proxy: string;
   sceneMessages: number;
-  scenePrompt: string;
-  portraitPrompt: string;
   autoSceneEvery: number;
 }
 
 export interface Settings {
+  /** Interface language (prompts to the model are English either way). */
+  language: 'en' | 'ru';
+  /** Overrides of the built-in prompts (lib/prompts.ts), by key. */
+  prompts: Record<string, string>;
   activeCharacterId: ID;
   activeGroupId: ID;
   activeChatId: ID;
@@ -571,24 +573,25 @@ export interface Settings {
     swipeAnimation: boolean;
     renderLimit: number;
     autoTitle: boolean;
+    /** Run scripts of HTML widgets in messages (in a sandboxed frame). */
+    allowScripts: boolean;
   };
   impersonate: {
     mode: ImpersonateMode;
     direction: string;
     count: number;
-    prompts: Record<ImpersonateMode, string>;
+    /** Hide the Impersonate+ bar above the message box. */
+    hidden: boolean;
   };
   memory: {
     autoEvery: number;
     suggestFacts: boolean;
     budget: number;
-    summaryPrompt: string;
-    factsPrompt: string;
-    template: string;
     depth: number;
   };
   generator: {
-    language: 'ru' | 'en';
+    /** Language of the generated cards (a code from LANGUAGE_NAMES). */
+    language: string;
     template: 'v2' | 'compact' | 'custom';
     customTemplate: string;
     greetings: boolean;

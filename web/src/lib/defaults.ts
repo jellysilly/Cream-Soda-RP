@@ -20,6 +20,8 @@ import type {
   Group,
 } from './types';
 import { uid } from './utils';
+import { t } from './i18n';
+import { DEFAULT_PROMPTS, type PromptKey } from './prompts';
 
 const now = () => Date.now();
 
@@ -28,7 +30,7 @@ const now = () => Date.now();
 export function newCharacter(patch: Partial<Character> = {}): Character {
   return {
     id: uid(),
-    name: 'Новый персонаж',
+    name: t('New character'),
     tagline: '',
     description: '',
     personality: '',
@@ -63,7 +65,7 @@ export function newCharacter(patch: Partial<Character> = {}): Character {
 export function newPersona(patch: Partial<Persona> = {}): Persona {
   return {
     id: uid(),
-    name: 'Я',
+    name: t('Me'),
     title: '',
     description: '',
     avatar: '',
@@ -81,7 +83,7 @@ export function newPersona(patch: Partial<Persona> = {}): Persona {
 export function newGroup(patch: Partial<Group> = {}): Group {
   return {
     id: uid(),
-    name: 'Новая группа',
+    name: t('New group'),
     memberIds: [],
     mutedIds: [],
     activation: 'natural',
@@ -100,7 +102,7 @@ export function newGroup(patch: Partial<Group> = {}): Group {
 export function newWorldEntry(patch: Partial<WorldEntry> = {}): WorldEntry {
   return {
     uid: uid(),
-    comment: 'Новая запись',
+    comment: t('New entry'),
     keys: [],
     secondaryKeys: [],
     selectiveLogic: 0,
@@ -132,17 +134,17 @@ export function newWorldEntry(patch: Partial<WorldEntry> = {}): WorldEntry {
 }
 
 export function newLorebook(patch: Partial<Lorebook> = {}): Lorebook {
-  return { id: uid(), name: 'Новый лорбук', description: '', entries: [], updatedAt: now(), ...patch };
+  return { id: uid(), name: t('New lorebook'), description: '', entries: [], updatedAt: now(), ...patch };
 }
 
 export function newPlot(patch: Partial<Plot> = {}): Plot {
-  return { id: uid(), title: 'Новый сюжет', premise: '', scenario: '', firstMessage: '', tags: [], charIds: [], updatedAt: now(), ...patch };
+  return { id: uid(), title: t('New plot'), premise: '', scenario: '', firstMessage: '', tags: [], charIds: [], updatedAt: now(), ...patch };
 }
 
 export function newRegex(patch: Partial<RegexScript> = {}): RegexScript {
   return {
     id: uid(),
-    name: 'Новый регекс',
+    name: t('New regex'),
     findRegex: '',
     replaceString: '',
     trimStrings: [],
@@ -166,7 +168,7 @@ export function newRegex(patch: Partial<RegexScript> = {}): RegexScript {
 export function newConnection(patch: Partial<ConnectionProfile> = {}): ConnectionProfile {
   return {
     id: uid(),
-    name: 'Новый профиль',
+    name: t('New profile'),
     api: 'openai',
     baseUrl: '',
     model: '',
@@ -184,7 +186,7 @@ export function newConnection(patch: Partial<ConnectionProfile> = {}): Connectio
 }
 
 export function newQuickReplySet(patch: Partial<QuickReplySet> = {}): QuickReplySet {
-  return { id: uid(), name: 'Быстрые ответы', enabled: true, replies: [], updatedAt: now(), ...patch };
+  return { id: uid(), name: t('Quick replies'), enabled: true, replies: [], updatedAt: now(), ...patch };
 }
 
 export function newMessage(patch: Partial<ChatMessage> & Pick<ChatMessage, 'role' | 'name' | 'text'>): ChatMessage {
@@ -249,73 +251,73 @@ function block(id: string, name: string, patch: Partial<PromptBlock> = {}): Prom
 }
 
 export const MARKER_LABELS: Record<string, string> = {
-  charCard: 'маркер карточки',
-  charDescription: 'описание из карточки',
-  charPersonality: 'характер из карточки',
-  scenario: 'сценарий из карточки',
-  personaDescription: 'маркер персоны',
-  worldInfoBefore: 'лорбук до карточки',
-  worldInfoAfter: 'лорбук после карточки',
-  dialogueExamples: 'из карточки',
-  chatHistory: 'сообщения чата',
-  memoryBook: 'главы и факты',
+  charCard: t('card marker'),
+  charDescription: t('description from the card'),
+  charPersonality: t('personality from the card'),
+  scenario: t('scenario from the card'),
+  personaDescription: t('persona marker'),
+  worldInfoBefore: t('lorebook before the card'),
+  worldInfoAfter: t('lorebook after the card'),
+  dialogueExamples: t('from the card'),
+  chatHistory: t('chat messages'),
+  memoryBook: t('chapters and facts'),
 };
 
+// Preset prompts go to the model as they are, so they are English.
+export const MAIN_PROMPTS = {
+  romance:
+    'You are the narrator of a roleplay story. Write in third person, in short paragraphs, and never decide for {{user}}. Put actions and descriptions in *italics* and speech in "quotes". Write in the language of the story.',
+  noir: 'You are the narrator of a slow-burning noir story. Write in third person, in dense atmospheric prose: rain, neon, shadows, things left unsaid. Never decide or speak for {{user}}. Write in the language of the story.',
+  quest:
+    'You are the game master of a text adventure. Describe the surroundings and the consequences of the actions of {{user}} and of the characters of the world. End every reply with a short list of what {{user}} can do next. Never act for {{user}}. Write in the language of the story.',
+};
+
+export const STYLE_PROMPTS = {
+  romance: 'Style: gentle humor, sensory details, no pathos.',
+  noir: "Style: slow pace, short sharp lines, details of the city. Don't rush events.",
+  quest: 'Style: clear descriptions, concrete details, honest consequences. Keep the tension.',
+};
+
+export const POST_INSTRUCTION = '[Continue the scene as {{char}}. Do not write for {{user}}. Length: 2–4 paragraphs.]';
+
 export function defaultPromptBlocks(variant: 'romance' | 'noir' | 'quest' = 'romance'): PromptBlock[] {
-  const main = {
-    romance:
-      'Ты — рассказчик ролевой истории. Пиши от третьего лица, короткими абзацами, не решай за {{user}}. Действия и описания выделяй *курсивом*, реплики — «кавычками».',
-    noir:
-      'Ты — рассказчик неспешной нуарной истории. Пиши от третьего лица, плотной атмосферной прозой: дождь, неон, тени, недосказанность. Не решай и не говори за {{user}}.',
-    quest:
-      'Ты — ведущий текстового квеста. Описывай окружение, последствия действий {{user}} и персонажей мира. В конце каждого ответа кратко перечисли, что {{user}} может сделать дальше. Никогда не действуй за {{user}}.',
-  }[variant];
-  const style = {
-    romance: 'Стиль: мягкий юмор, сенсорные детали, без пафоса.',
-    noir: 'Стиль: медленный темп, короткие хлёсткие реплики, детали города. Не торопи события.',
-    quest: 'Стиль: ясные описания, конкретные детали, честные последствия. Держи напряжение.',
-  }[variant];
   return [
-    block('main', 'Основной промпт', { content: main, builtin: true }),
-    block('charCard', 'Описание персонажа · {{char}}', { marker: 'charCard', builtin: true }),
-    block('personaDescription', 'Персона · {{user}}', { marker: 'personaDescription', builtin: true }),
-    block('worldInfoBefore', 'Лорбук · до истории', { marker: 'worldInfoBefore', builtin: true }),
-    block('worldInfoAfter', 'Лорбук · после карточки', { marker: 'worldInfoAfter', builtin: true }),
+    block('main', 'Main prompt', { content: MAIN_PROMPTS[variant], builtin: true }),
+    block('charCard', 'Character description · {{char}}', { marker: 'charCard', builtin: true }),
+    block('personaDescription', 'Persona · {{user}}', { marker: 'personaDescription', builtin: true }),
+    block('worldInfoBefore', 'Lorebook · before the story', { marker: 'worldInfoBefore', builtin: true }),
+    block('worldInfoAfter', 'Lorebook · after the card', { marker: 'worldInfoAfter', builtin: true }),
     block('memoryBook', 'Memory Book', { marker: 'memoryBook', builtin: true }),
-    block('dialogueExamples', 'Примеры диалогов', { marker: 'dialogueExamples', builtin: true, enabled: false }),
-    block('chatHistory', 'История чата', { marker: 'chatHistory', builtin: true }),
-    block('style', variant === 'romance' ? 'Стиль · мягкий роман' : variant === 'noir' ? 'Стиль · нуар' : 'Стиль · квест', {
-      content: style,
+    block('dialogueExamples', 'Dialogue examples', { marker: 'dialogueExamples', builtin: true, enabled: false }),
+    block('chatHistory', 'Chat history', { marker: 'chatHistory', builtin: true }),
+    block('style', variant === 'romance' ? 'Style · soft romance' : variant === 'noir' ? 'Style · noir' : 'Style · quest', {
+      content: STYLE_PROMPTS[variant],
       position: 'depth',
       depth: 2,
     }),
-    block('jailbreak', 'Пост-инструкция', {
-      role: 'user',
-      content: '[Продолжи сцену от лица {{char}}. Не пиши за {{user}}. Объём — 2–4 абзаца.]',
-      builtin: true,
-    }),
-    block('prefill', 'Префилл ответа', { role: 'assistant', content: '', enabled: false, builtin: true }),
+    block('jailbreak', 'Post-history instruction', { role: 'user', content: POST_INSTRUCTION, builtin: true }),
+    block('prefill', 'Response prefill', { role: 'assistant', content: '', enabled: false, builtin: true }),
   ];
 }
 
 export const DEFAULT_UTILITY = {
   impersonation:
-    '[Напиши следующую реплику за {{user}} — от первого лица, в его манере и голосе. Не пиши за {{char}} и не описывай его реакцию. Только текст реплики.]',
-  continueNudge: '[Продолжи свой последний ответ с того места, где он оборвался, не повторяя уже написанное.]',
-  newChat: '[Начало нового чата]',
-  newGroupChat: '[Начало нового группового чата. Участники: {{group}}]',
-  newExampleChat: '[Пример диалога]',
-  groupNudge: '[Напиши следующий ответ только от лица {{char}}.]',
+    "[Write {{user}}'s next reply in third person, in {{user}}'s manner and voice: refer to {{user}} by name or as he/she/they, never as \"I\". Do not write for {{char}} or describe {{char}}'s reaction. Only the reply itself.]",
+  continueNudge: '[Continue your last reply from where it stopped, without repeating what is already written.]',
+  newChat: '[Start a new chat]',
+  newGroupChat: '[Start a new group chat. Group members: {{group}}]',
+  newExampleChat: '[Example chat]',
+  groupNudge: '[Write the next reply only as {{char}}.]',
   wiFormat: '{0}',
-  scenarioFormat: 'Сценарий: {{scenario}}',
-  personalityFormat: 'Характер {{char}}: {{personality}}',
+  scenarioFormat: 'Scenario: {{scenario}}',
+  personalityFormat: "{{char}}'s personality: {{personality}}",
   sendIfEmpty: '',
 };
 
 export function newPreset(patch: Partial<Preset> = {}, variant: 'romance' | 'noir' | 'quest' = 'romance'): Preset {
   return {
     id: uid(),
-    name: 'Новый пресет',
+    name: t('New preset'),
     samplers: { ...DEFAULT_SAMPLERS },
     prompts: defaultPromptBlocks(variant),
     utility: { ...DEFAULT_UTILITY },
@@ -331,13 +333,13 @@ export function newPreset(patch: Partial<Preset> = {}, variant: 'romance' | 'noi
 
 export function seedPresets(): Preset[] {
   return [
-    newPreset({ id: 'sweet-romance', name: 'Сладкий роман v3' }, 'romance'),
+    newPreset({ id: 'sweet-romance', name: 'Sweet Romance v3' }, 'romance'),
     newPreset(
-      { id: 'noir-slow', name: 'Нуар · медленный', samplers: { ...DEFAULT_SAMPLERS, temperature: 0.9, maxTokens: 450 } },
+      { id: 'noir-slow', name: 'Noir · slow burn', samplers: { ...DEFAULT_SAMPLERS, temperature: 0.9, maxTokens: 450 } },
       'noir',
     ),
     newPreset(
-      { id: 'text-quest', name: 'Текстовый квест', samplers: { ...DEFAULT_SAMPLERS, temperature: 0.8, topP: 0.95, maxTokens: 700 } },
+      { id: 'text-quest', name: 'Text quest', samplers: { ...DEFAULT_SAMPLERS, temperature: 0.8, topP: 0.95, maxTokens: 700 } },
       'quest',
     ),
   ];
@@ -433,7 +435,7 @@ export const BUILTIN_INSTRUCT: InstructTemplate[] = [
     stopSequence: '<|user|>',
     wrap: false,
   }),
-  tpl('plain', 'Без шаблона (Имя: текст)', { namesBehavior: 'always', inputSuffix: '\n', outputSuffix: '\n', systemSuffix: '\n' }),
+  tpl('plain', 'No template (Name: text)', { namesBehavior: 'always', inputSuffix: '\n', outputSuffix: '\n', systemSuffix: '\n' }),
 ];
 
 // ───────── Themes ─────────
@@ -511,9 +513,9 @@ function theme(id: string, name: string, note: string, dark: boolean, tokens: Th
 }
 
 export const BUILTIN_THEMES: Theme[] = [
-  theme('cream-soda', 'Cream Soda', 'день', false, CREAM_TOKENS),
-  theme('midnight-soda', 'Midnight Soda', 'ночь', true, MIDNIGHT_TOKENS),
-  theme('strawberry', 'Клубничный торт', 'день', false, {
+  theme('cream-soda', 'Cream Soda', t('day'), false, CREAM_TOKENS),
+  theme('midnight-soda', 'Midnight Soda', t('night'), true, MIDNIGHT_TOKENS),
+  theme('strawberry', t('Strawberry Cake'), t('day'), false, {
     ...CREAM_TOKENS,
     bg: 'linear-gradient(180deg, #FFC9DE 0%, #FFE0EC 55%, #FFF1F6 100%)',
     bgSolid: '#FFE3EE',
@@ -532,7 +534,7 @@ export const BUILTIN_THEMES: Theme[] = [
     fieldBorder: '#F6B9D1',
     chip: '#FFE0EC',
   }),
-  theme('pudding', 'Пудинг', 'вечер', false, {
+  theme('pudding', t('Pudding'), t('evening'), false, {
     ...CREAM_TOKENS,
     bg: 'linear-gradient(180deg, #FFF1D6 0%, #F8E2BE 55%, #F3D3A2 100%)',
     bgSolid: '#F8E2BE',
@@ -556,23 +558,23 @@ export const BUILTIN_THEMES: Theme[] = [
 ];
 
 export const THEME_TOKEN_LABELS: { key: keyof ThemeTokens; label: string }[] = [
-  { key: 'accent', label: 'Акцент' },
-  { key: 'text', label: 'Текст' },
-  { key: 'muted', label: 'Приглушённый' },
-  { key: 'bubbleChar', label: 'Пузырь чара' },
-  { key: 'bubbleUser', label: 'Пузырь игрока' },
-  { key: 'card', label: 'HTML-карточки' },
-  { key: 'cardText', label: 'Текст карточек' },
-  { key: 'surface', label: 'Панели' },
-  { key: 'border', label: 'Обводка' },
-  { key: 'accentText', label: 'Текст на акценте' },
-  { key: 'em', label: 'Курсив (действия)' },
-  { key: 'link', label: 'Ссылки' },
-  { key: 'field', label: 'Поля ввода' },
-  { key: 'fieldBorder', label: 'Обводка полей' },
-  { key: 'chip', label: 'Чипы и вкладки' },
-  { key: 'mint', label: 'Мятный (статусы)' },
-  { key: 'bgSolid', label: 'Фон (сплошной)' },
+  { key: 'accent', label: t('Accent') },
+  { key: 'text', label: t('Text') },
+  { key: 'muted', label: t('Muted') },
+  { key: 'bubbleChar', label: t('Character bubble') },
+  { key: 'bubbleUser', label: t('Player bubble') },
+  { key: 'card', label: t('HTML cards') },
+  { key: 'cardText', label: t('Card text') },
+  { key: 'surface', label: t('Panels') },
+  { key: 'border', label: t('Outline') },
+  { key: 'accentText', label: t('Text on accent') },
+  { key: 'em', label: t('Italics (actions)') },
+  { key: 'link', label: t('Links') },
+  { key: 'field', label: t('Input fields') },
+  { key: 'fieldBorder', label: t('Field outline') },
+  { key: 'chip', label: t('Chips and tabs') },
+  { key: 'mint', label: t('Mint (statuses)') },
+  { key: 'bgSolid', label: t('Background (solid)') },
 ];
 
 export const UI_CLASSES = [
@@ -605,10 +607,10 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   model: '',
   negative: 'lowres, bad anatomy, text, watermark',
   styles: [
-    { id: 'pastel', label: 'Пастель', prompt: 'soft pastel colors, dreamy light, gentle shading' },
-    { id: 'anime', label: 'Аниме', prompt: 'anime style, clean lineart, cel shading' },
-    { id: 'watercolor', label: 'Акварель', prompt: 'watercolor painting, paper texture, soft bleeding edges' },
-    { id: 'film', label: 'Плёнка', prompt: '35mm film photo, grain, natural colors, shallow depth of field' },
+    { id: 'pastel', label: t('Pastel'), prompt: 'soft pastel colors, dreamy light, gentle shading' },
+    { id: 'anime', label: t('Anime'), prompt: 'anime style, clean lineart, cel shading' },
+    { id: 'watercolor', label: t('Watercolor'), prompt: 'watercolor painting, paper texture, soft bleeding edges' },
+    { id: 'film', label: t('Film'), prompt: '35mm film photo, grain, natural colors, shallow depth of field' },
   ],
   styleId: 'pastel',
   width: 768,
@@ -620,34 +622,15 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   sampler: 'Euler a',
   proxy: '',
   sceneMessages: 6,
-  scenePrompt:
-    'Составь промпт для генератора изображений (на английском, через запятую, до 60 слов), описывающий текущий кадр сцены: место, освещение, персонажей и их внешность, позы, эмоции. Внешность {{char}}: {{description}}. Только промпт, без пояснений.',
-  portraitPrompt:
-    'Составь промпт для генератора изображений (на английском, через запятую, до 50 слов): портрет {{char}} по пояс, внешность, одежда, выражение лица. Описание: {{description}}. Только промпт.',
   autoSceneEvery: 0,
 };
 
 // ───────── Settings ─────────
 
-export const IMPERSONATE_PROMPTS = {
-  continue:
-    '[Продолжи черновик реплики {{user}} ниже — тем же голосом, 1–3 предложения, без повторов. Верни только продолжение.]\nЧерновик: {{input}}',
-  variants:
-    '[Предложи {{count}} разных варианта следующей реплики {{user}} — от первого лица, в его манере. Разнообразь тон и действие. Формат строго:\n### 1\nтекст\n### 2\nтекст\n…]',
-  action:
-    '[Предложи {{count}} варианта следующего действия {{user}} — только действие, без прямой речи, курсивом между *звёздочками*, от первого лица. Формат строго:\n### 1\nтекст\n### 2\nтекст\n…]',
-  voice:
-    '[Предложи {{count}} варианта реплики {{user}}, максимально точно передающих голос персоны: лексику, ритм, привычки из её описания. Формат строго:\n### 1\nтекст\n### 2\nтекст\n…]',
-};
-
-export const MEMORY_SUMMARY_PROMPT =
-  'Ты ведёшь «Memory Book» ролевой истории. Сожми фрагмент чата ниже в запись главы.\nОтветь строго в формате:\nНазвание: короткое название главы\nКонспект: 2–4 предложения в прошедшем времени, только важные события, решения, обещания и изменения отношений\nКлючи: 3–5 ключевых слов через запятую\n\nФрагмент:\n{{chunk}}';
-
-export const MEMORY_FACTS_PROMPT =
-  'Выпиши из фрагмента ролевого чата ниже до 3 устойчивых фактов о персонажах или мире, которые стоит помнить всю историю (привычки, тайны, обещания, планы). Каждый факт — одной строкой, начиная с «- ». Если ничего нового нет — ответь «нет».\n\nУже известно:\n{{facts}}\n\nФрагмент:\n{{chunk}}';
-
 export function defaultSettings(): Settings {
   return {
+    language: 'en',
+    prompts: {},
     activeCharacterId: '',
     activeGroupId: '',
     activeChatId: '',
@@ -685,19 +668,17 @@ export function defaultSettings(): Settings {
       swipeAnimation: true,
       renderLimit: 80,
       autoTitle: true,
+      allowScripts: false,
     },
-    impersonate: { mode: 'variants', direction: '', count: 3, prompts: { ...IMPERSONATE_PROMPTS } },
+    impersonate: { mode: 'variants', direction: '', count: 3, hidden: false },
     memory: {
       autoEvery: 20,
       suggestFacts: true,
       budget: 1500,
-      summaryPrompt: MEMORY_SUMMARY_PROMPT,
-      factsPrompt: MEMORY_FACTS_PROMPT,
-      template: '[Память истории]\n{{chapters}}\n[Факты]\n{{facts}}',
       depth: 0,
     },
     generator: {
-      language: 'ru',
+      language: 'en',
       template: 'v2',
       customTemplate: '',
       greetings: true,
@@ -710,7 +691,7 @@ export function defaultSettings(): Settings {
     extensions: {
       enabled: { memory: true, impersonate: true, images: true, tts: false, translate: false, dice: false, expressions: false, quickreplies: true },
       tts: { voice: '', rate: 1, pitch: 1, auto: false, onlyQuotes: true },
-      translate: { target: 'ru', auto: false, showOriginal: true },
+      translate: { target: '', auto: false, showOriginal: true },
       dice: { showBar: true },
       expressions: { enabled: false, classify: 'keywords' },
     },
@@ -721,15 +702,45 @@ export function defaultSettings(): Settings {
   };
 }
 
+/**
+ * Prompts used to live inside their feature settings and were Russian by default.
+ * Carry over only the ones a user rewrote in another language: Russian texts
+ * are the old defaults, and prompts are English now.
+ */
+const LEGACY_PROMPT_FIELDS: [string, string, PromptKey][] = [
+  ['impersonate', 'prompts.continue', 'impersonateContinue'],
+  ['impersonate', 'prompts.variants', 'impersonateVariants'],
+  ['impersonate', 'prompts.action', 'impersonateAction'],
+  ['impersonate', 'prompts.voice', 'impersonateVoice'],
+  ['memory', 'summaryPrompt', 'memorySummary'],
+  ['memory', 'factsPrompt', 'memoryFacts'],
+  ['memory', 'template', 'memoryBlock'],
+];
+
+export function migrateLegacyPrompt(prompts: Record<string, string>, key: PromptKey, value: unknown) {
+  if (typeof value !== 'string' || !value.trim() || /[А-Яа-яЁё]/.test(value)) return;
+  if (value !== DEFAULT_PROMPTS[key] && !prompts[key]) prompts[key] = value;
+}
+
 /** Fills in fields added in newer versions so old saved settings keep working. */
 export function mergeSettings(saved: Partial<Settings> | undefined): Settings {
   const d = defaultSettings();
   const s = (saved || {}) as any;
   const out: any = { ...d, ...s };
+  // Profiles saved before languages existed were used with the Russian interface: keep it.
+  if (s.language !== 'en' && s.language !== 'ru') out.language = Object.keys(s).length ? 'ru' : d.language;
   for (const key of ['profileFor', 'theme', 'worldInfo', 'chat', 'impersonate', 'memory', 'generator', 'backup'] as const) {
     out[key] = { ...(d as any)[key], ...(s[key] || {}) };
   }
-  out.impersonate.prompts = { ...d.impersonate.prompts, ...(s.impersonate?.prompts || {}) };
+  out.prompts = { ...(s.prompts || {}) };
+  for (const [section, path, key] of LEGACY_PROMPT_FIELDS) {
+    const value = path.split('.').reduce((o: any, k) => o?.[k], s[section]);
+    migrateLegacyPrompt(out.prompts, key, value);
+  }
+  delete out.impersonate.prompts;
+  delete out.memory.summaryPrompt;
+  delete out.memory.factsPrompt;
+  delete out.memory.template;
   out.extensions = {
     ...d.extensions,
     ...(s.extensions || {}),
@@ -747,66 +758,66 @@ export function mergeSettings(saved: Partial<Settings> | undefined): Settings {
 export function demoContent() {
   const lore = newLorebook({
     id: 'night-shibuya',
-    name: 'Ночной Сибуя',
-    description: 'Места и люди вокруг кафе «Кристалл».',
+    name: 'Night Shibuya',
+    description: 'Places and people around the Crystal café.',
     entries: [
       newWorldEntry({
-        comment: 'Кафе «Кристалл»',
-        keys: ['кафе', 'стойка', 'Кристалл'],
+        comment: 'Crystal café',
+        keys: ['café', 'cafe', 'counter', 'Crystal'],
         content:
-          'Кафе «Кристалл» — крошечное ночное кафе в переулке Сибуи: шесть мест у стойки, витрина с десертами, неоновая вывеска в форме бокала крем-соды. Закрывается в полночь. Фирменный напиток — голубая крем-сода с ванильным мороженым и вишней.',
+          'The Crystal is a tiny late-night café in a Shibuya back alley: six seats at the counter, a dessert display and a neon sign shaped like a glass of cream soda. It closes at midnight. The signature drink is a blue cream soda with vanilla ice cream and a cherry.',
         order: 100,
       }),
       newWorldEntry({
-        comment: 'Станция Сибуя',
-        keys: ['станция', 'электричка', 'метро'],
-        content: 'До станции Сибуя от кафе семь минут пешком под навесами. Последняя электричка Рин уходит в 00:24.',
+        comment: 'Shibuya Station',
+        keys: ['station', 'train', 'subway'],
+        content: "Shibuya Station is a seven-minute walk from the café under the awnings. Rin's last train leaves at 00:24.",
         order: 90,
       }),
       newWorldEntry({
-        comment: 'Семья Рин',
-        keys: ['семья', 'родители', 'мама'],
-        secondaryKeys: ['Рин', 'Хоккайдо'],
+        comment: "Rin's family",
+        keys: ['family', 'parents', 'mom'],
+        secondaryKeys: ['Rin', 'Hokkaido'],
         selectiveLogic: 0,
-        content: 'Родители Рин живут на Хоккайдо и держат молочную ферму. Рин не видела их три года и копит на поездку домой.',
+        content: "Rin's parents live in Hokkaido and run a dairy farm. Rin hasn't seen them in three years and is saving up for a trip home.",
         order: 80,
       }),
     ],
   });
   const rin = newCharacter({
     id: 'hanami-rin',
-    name: 'Ханами Рин',
+    name: 'Hanami Rin',
     tagline: 'night barista',
     kana: 'リン',
     palette: 0,
-    tags: ['романтика', 'быт'],
+    tags: ['romance', 'slice of life'],
     description:
-      '24 года, бариста ночного кафе «Кристалл» в Сибуе. Мягкая, ироничная, к полуночи устаёт и становится честнее. Копит на поездку на Хоккайдо. Розовое каре, фартук с вышитой вишней, привычка говорить с кофемашиной.',
-    personality: 'тёплая, ироничная, наблюдательная, немного одинокая; боится грома, но не признаётся днём',
-    scenario: 'Дождливая ночь, кафе вот-вот закроется. {{user}} — постоянный поздний гость.',
+      "24, barista at the late-night Crystal café in Shibuya. Soft-spoken and wry; by midnight she gets tired and more honest. Saving up for a trip to Hokkaido. Pink bob, an apron with an embroidered cherry, a habit of talking to the coffee machine.",
+    personality: 'warm, wry, observant, a little lonely; afraid of thunder but would never admit it in daylight',
+    scenario: 'A rainy night, the café is about to close. {{user}} is a regular late-night guest.',
     firstMessage:
-      '*Рин ставит перед тобой высокий бокал: голубая газировка, шарик ванильного мороженого и вишенка, которая вот-вот соскользнёт.* «За счёт заведения. Ты опять пришёл за пять минут до закрытия, {{user}}». *Она опирается на стойку и смотрит на дождь за витриной.* «В такие ночи мне кажется, что кафе плывёт по городу, как аквариум».\n\n[status|23:40 · ливень|Кафе «Кристалл»|тёплая усталость|62]',
+      '*Rin sets a tall glass in front of you: blue soda, a scoop of vanilla ice cream and a cherry about to slide off.* "On the house. You came in five minutes before closing again, {{user}}." *She leans on the counter and watches the rain behind the window.* "On nights like this the café feels like an aquarium floating through the city."\n\n[status|23:40 · downpour|Crystal café|warm tiredness|62]',
     alternateGreetings: [
-      '*Свет в кафе мигает, и Рин замирает с чашкой в руках.* «…Только не гроза. Пожалуйста, скажи, что это просто фура проехала».',
-      '*Рин дописывает мелом на доске «Сегодня: крем-сода без льда» и оборачивается.* «Угадала? Ты ведь всегда заказываешь без льда».',
+      '*The lights in the café flicker and Rin freezes with a cup in her hands.* "…Not a thunderstorm. Please tell me that was just a truck going by."',
+      '*Rin finishes writing "Today: cream soda, no ice" on the chalkboard and turns around.* "Did I guess right? You always order it without ice."',
     ],
     exampleMessages:
-      '<START>\n{{user}}: Что посоветуешь сегодня?\n{{char}}: *Рин задумчиво постукивает ложечкой по стойке.* «Сегодня дождь, значит — что-то тёплое внутри и холодное сверху. Крем-сода, но я подогрею тебе вишню».',
+      '<START>\n{{user}}: What would you recommend tonight?\n{{char}}: *Rin taps a spoon on the counter, thinking.* "It\'s raining, so something warm inside and cold on top. Cream soda, but I\'ll warm up the cherry for you."',
     creator: 'Cream Soda',
     characterVersion: '1.0',
     worldIds: [lore.id],
     presetId: 'sweet-romance',
-    creatorNotes: 'Демо-персонаж Cream Soda. Можно смело редактировать или удалить.',
+    creatorNotes: 'Cream Soda demo character. Feel free to edit or delete it.',
   });
   const yuki = newPersona({
     id: 'yuki',
-    name: 'Юки',
+    name: 'Yuki',
     kana: 'ユ',
     palette: 1,
-    description: 'Юки, 26 лет, дизайнер интерфейсов. Задерживается на работе и заходит в «Кристалл» перед последней электричкой. Спокойный, наблюдательный, носит большой синий зонт.',
+    description: 'Yuki, 26, a UI designer. Works late and drops by the Crystal before the last train. Calm and observant, carries a big blue umbrella.',
   });
-  const guest = newPersona({ id: 'night-guest', name: 'Ночной гость', kana: 'ヨ', palette: 2, description: 'Безымянный путник, который заходит туда, где горит свет.' });
-  const narrator = newPersona({ id: 'narrator', name: 'Рассказчик', kana: 'カ', palette: 3, description: 'Наблюдатель со стороны, описывающий события от третьего лица.' });
+  const guest = newPersona({ id: 'night-guest', name: 'Night guest', kana: 'ヨ', palette: 2, description: 'A nameless wanderer who walks in wherever the lights are on.' });
+  const narrator = newPersona({ id: 'narrator', name: 'Narrator', kana: 'カ', palette: 3, description: 'An outside observer who describes events in third person.' });
   return { lore, rin, personas: [yuki, guest, narrator] };
 }
 
@@ -814,51 +825,51 @@ export function demoRegexes(): RegexScript[] {
   return [
     newRegex({
       id: 'scene-status',
-      name: 'Статус сцены',
+      name: t('Scene status'),
       findRegex: '/\\[status\\|(.+?)\\|(.+?)\\|(.+?)\\|(\\d+)\\]/g',
       replaceString:
-        '<div class="cs-ticket cs-status">\n  <div class="cs-ticket__band"></div>\n  <div class="cs-status__grid">\n    <div><b>Время</b><span>$1</span></div>\n    <div><b>Место</b><span>$2</span></div>\n    <div><b>Настроение</b><span>$3</span></div>\n    <div><b>Симпатия · $4</b><meter value="$4" max="100"></meter></div>\n  </div>\n</div>',
+        '<div class="cs-ticket cs-status">\n  <div class="cs-ticket__band"></div>\n  <div class="cs-status__grid">\n    <div><b>Time</b><span>$1</span></div>\n    <div><b>Place</b><span>$2</span></div>\n    <div><b>Mood</b><span>$3</span></div>\n    <div><b>Affection · $4</b><meter value="$4" max="100"></meter></div>\n  </div>\n</div>',
       placement: [2],
       markdownOnly: true,
       renderHtml: true,
       scope: { type: 'global' },
       order: 10,
-      testInput: '…как аквариум».\n[status|23:40 · ливень|Кафе «Кристалл»|тёплая усталость|62]',
+      testInput: '…like an aquarium."\n[status|23:40 · downpour|Crystal café|warm tiredness|62]',
     }),
     newRegex({
       id: 'no-sighs',
-      name: 'Убрать «*вздыхает*»',
-      findRegex: '/\\*\\s*вздыхает\\s*\\*\\s*/gi',
+      name: t('Remove "*sighs*"'),
+      findRegex: '/\\*\\s*sighs\\s*\\*\\s*/gi',
       replaceString: '',
       placement: [2],
       order: 20,
-      testInput: '*вздыхает* Ну что ж.',
+      testInput: '*sighs* Well then.',
     }),
     newRegex({
       id: 'thoughts-italic',
-      name: 'Мысли курсивом',
+      name: t('Thoughts in italics'),
       findRegex: '/\\(\\((.+?)\\)\\)/g',
       replaceString: '<i class="cs-thought">$1</i>',
       placement: [1, 2],
       markdownOnly: true,
       renderHtml: true,
       order: 30,
-      testInput: '((Интересно, она заметила?)) «Привет».',
+      testInput: '((I wonder if she noticed?)) "Hi."',
     }),
     newRegex({
       id: 'clean-markdown',
-      name: 'Чистка markdown',
+      name: t('Markdown cleanup'),
       findRegex: '/^#{1,6}\\s+/gm',
       replaceString: '',
       placement: [1, 2],
       promptOnly: true,
       disabled: true,
       order: 40,
-      testInput: '## Заголовок\nТекст',
+      testInput: '## Heading\nText',
     }),
     newRegex({
       id: 'phone-chat',
-      name: 'Телефонный чат',
+      name: t('Phone chat'),
       findRegex: '/\\[phone\\|(.+?)\\|(.+?)\\]/g',
       replaceString: '<div class="cs-phone"><b>$1</b><p>$2</p></div>',
       placement: [2],
@@ -866,7 +877,7 @@ export function demoRegexes(): RegexScript[] {
       renderHtml: true,
       scope: { type: 'character', id: 'hanami-rin' },
       order: 50,
-      testInput: '[phone|Рин|Ты дошёл? Зонт не забыл?]',
+      testInput: '[phone|Rin|Did you get home? Did you remember your umbrella?]',
     }),
   ];
 }
@@ -874,11 +885,11 @@ export function demoRegexes(): RegexScript[] {
 export function demoQuickReplies(): QuickReplySet {
   return newQuickReplySet({
     id: 'default-qr',
-    name: 'Основные',
+    name: t('Basics'),
     replies: [
-      { id: uid(), label: 'Дальше', message: '/continue', title: 'Продолжить ответ', autoOnNewChat: false, autoOnUser: false, autoOnAi: false },
-      { id: uid(), label: 'Описать сцену', message: '/sys *Камера отъезжает: опиши окружение и настроение сцены.*|/trigger', title: '', autoOnNewChat: false, autoOnUser: false, autoOnAi: false },
-      { id: uid(), label: 'Бросок d20', message: '/roll 1d20', title: 'Кубик d20', autoOnNewChat: false, autoOnUser: false, autoOnAi: false },
+      { id: uid(), label: t('Next'), message: '/continue', title: t('Continue the reply'), autoOnNewChat: false, autoOnUser: false, autoOnAi: false },
+      { id: uid(), label: t('Describe the scene'), message: '/sys *The camera pulls back: describe the surroundings and the mood of the scene.*|/trigger', title: '', autoOnNewChat: false, autoOnUser: false, autoOnAi: false },
+      { id: uid(), label: t('Roll d20'), message: '/roll 1d20', title: t('d20 die'), autoOnNewChat: false, autoOnUser: false, autoOnAi: false },
     ],
   });
 }

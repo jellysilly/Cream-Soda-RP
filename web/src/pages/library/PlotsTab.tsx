@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon';
 import { newPlot } from '../../lib/defaults';
 import type { Plot } from '../../lib/types';
 import { startNewChat } from '../../lib/generate';
+import { t } from '../../lib/i18n';
 
 export function PlotsTab({ query }: { query: string }) {
   const plots = useStore((s) => s.plots);
@@ -25,42 +26,42 @@ export function PlotsTab({ query }: { query: string }) {
       <section className="cs-panel cs-col-side" style={{ flex: '1 1 280px' }}>
         <div className="cs-panel-head">
           <h2 className="cs-h2" style={{ fontSize: 17 }}>
-            Сюжеты
+            {t('Plots')}
           </h2>
-          <button type="button" className="cs-icon-btn cs-icon-btn--mint cs-ml-auto" style={{ width: 40, height: 40 }} aria-label="Новый сюжет" onClick={() => setSel(upsert('plots', newPlot()).id)}>
+          <button type="button" className="cs-icon-btn cs-icon-btn--mint cs-ml-auto" style={{ width: 40, height: 40 }} aria-label={t('New plot')} onClick={() => setSel(upsert('plots', newPlot()).id)}>
             <Icon name="plus" size={18} stroke={2.2} />
           </button>
         </div>
-        <p className="cs-hint">Сюжет — готовая завязка: сценарий и первое сообщение, с которых можно начать чат с любым персонажем.</p>
+        <p className="cs-hint">{t('A plot is a ready-made setup: a scenario and a first message you can start a chat with, with any character.')}</p>
         {list.map((x) => (
           <button key={x.id} type="button" className="cs-select-item" aria-pressed={x.id === sel} onClick={() => setSel(x.id)}>
             <Icon name="scene" size={20} />
             <span className="cs-grow">
               <span className="cs-select-item__title cs-ellipsis">{x.title}</span>
-              <span className="cs-select-item__sub cs-ellipsis">{x.premise || 'без описания'}</span>
+              <span className="cs-select-item__sub cs-ellipsis">{x.premise || t('no description')}</span>
             </span>
           </button>
         ))}
-        {!list.length ? <Empty icon="scene" title="Сюжетов пока нет">Создай вручную или в Генераторе</Empty> : null}
+        {!list.length ? <Empty icon="scene" title={t('No plots yet')}>{t('Create one by hand or in the Generator')}</Empty> : null}
       </section>
       {p ? (
         <section className="cs-panel cs-panel--strong cs-panel--pad-lg cs-col-main" style={{ flex: '999 1 460px' }}>
-          <Field label="Название">
+          <Field label={t('Title')}>
             <input className="cs-input cs-input--title" value={p.title} onChange={(e) => set({ title: e.target.value })} />
           </Field>
-          <Field label="Завязка (для себя)">
+          <Field label={t('Premise (for yourself)')}>
             <textarea className="cs-textarea" rows={2} value={p.premise} onChange={(e) => set({ premise: e.target.value })} />
           </Field>
-          <Field label="Сценарий" hint="Заменит сценарий карточки в чате, начатом по этому сюжету.">
+          <Field label={t('Scenario')} hint={t("Replaces the card's scenario in a chat started from this plot.")}>
             <textarea className="cs-textarea" rows={5} value={p.scenario} onChange={(e) => set({ scenario: e.target.value })} />
           </Field>
-          <Field label="Первое сообщение">
+          <Field label={t('First message')}>
             <textarea className="cs-textarea" rows={5} value={p.firstMessage} onChange={(e) => set({ firstMessage: e.target.value })} />
           </Field>
-          <Field label="Теги">
-            <TagInput value={p.tags} onChange={(tags) => set({ tags })} placeholder="+ тег" mono={false} />
+          <Field label={t('Tags')}>
+            <TagInput value={p.tags} onChange={(tags) => set({ tags })} placeholder={t('+ tag')} mono={false} />
           </Field>
-          <span className="cs-label">Начать чат по сюжету с…</span>
+          <span className="cs-label">{t('Start a plot chat with…')}</span>
           <div className="cs-chips">
             {characters.map((c) => (
               <button
@@ -81,12 +82,12 @@ export function PlotsTab({ query }: { query: string }) {
             className="cs-btn cs-btn--danger"
             style={{ alignSelf: 'flex-start' }}
             onClick={async () => {
-              if (!(await confirmDialog(`Удалить сюжет «${p.title}»?`, { ok: 'Удалить' }))) return;
+              if (!(await confirmDialog(t('Delete the plot “{title}”?', { title: p.title }), { ok: t('Delete') }))) return;
               await removeItem('plots', p.id);
-              toast('Сюжет удалён');
+              toast(t('Plot deleted'));
             }}
           >
-            Удалить
+            {t('Delete')}
           </button>
         </section>
       ) : null}

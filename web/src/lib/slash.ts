@@ -19,6 +19,7 @@ import { rollDice, substituteMacros } from './macros';
 import { applyRegex, PLACEMENT } from './regex';
 import { displayRegexScripts } from './generate';
 import type { ImpersonateMode } from './types';
+import { t } from './i18n';
 
 /**
  * STscript-style slash commands: /send, /sys, /gen, /trigger, /setvar…
@@ -86,7 +87,7 @@ function parseRange(spec: string, length: number): number[] {
 }
 
 function addMessage(role: 'user' | 'char' | 'system', name: string, text: string, extra: Record<string, unknown> = {}) {
-  if (!getState().chat) throw new Error('Нет открытого чата');
+  if (!getState().chat) throw new Error(t('No chat is open'));
   const msg = { ...newMessage({ role, name, text }), ...extra };
   setChat((c) => ({ ...c, messages: [...c.messages, msg] }));
   return msg;
@@ -105,59 +106,59 @@ type CommandFn = (p: Parsed, pipe: string) => Promise<string | void> | string | 
 
 const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[] }> = {
   send: {
-    help: '/send текст — добавить сообщение от персоны без ответа',
+    help: t('/send text — add a message from the persona without a reply'),
     fn: (p, pipe) => {
       const persona = activePersona();
       const text = applyRegex(p.text || pipe, displayRegexScripts(), { placement: PLACEMENT.SLASH_COMMAND, env: macroEnvFor() });
-      addMessage('user', persona?.name || 'Ты', text, { personaId: persona?.id });
+      addMessage('user', persona?.name || 'You', text, { personaId: persona?.id });
     },
   },
   sendas: {
-    help: '/sendas name=Имя текст — сообщение от лица персонажа',
+    help: t('/sendas name=Name text — a message on behalf of a character'),
     fn: (p, pipe) => {
-      const name = p.args.name || activeCharacter()?.name || 'Персонаж';
+      const name = p.args.name || activeCharacter()?.name || 'Character';
       const c = getState().characters.find((x) => x.name.toLowerCase() === name.toLowerCase());
       addMessage('char', c?.name || name, p.text || pipe, { charId: c?.id });
     },
   },
   sys: {
     aliases: ['narrate', 'nar'],
-    help: '/sys текст — сообщение рассказчика (видно модели)',
+    help: t('/sys text — a narrator message (the model sees it)'),
     fn: (p, pipe) => {
-      addMessage('system', 'Рассказчик', p.text || pipe);
+      addMessage('system', 'Narrator', p.text || pipe);
     },
   },
   comment: {
-    help: '/comment текст — заметка в чате, скрытая от модели',
+    help: t('/comment text — a note in the chat, hidden from the model'),
     fn: (p, pipe) => {
-      addMessage('system', 'Заметка', p.text || pipe, { hidden: true });
+      addMessage('system', 'Note', p.text || pipe, { hidden: true });
     },
   },
   trigger: {
-    help: '/trigger [имя] — запросить ответ (в группе — конкретного участника)',
+    help: t('/trigger [name] — ask for a reply (in a group, from a specific member)'),
     fn: async (p) => {
       const name = p.text.trim();
       const c = name ? getState().characters.find((x) => x.name.toLowerCase().startsWith(name.toLowerCase())) : undefined;
       await generateReplies(c?.id);
     },
   },
-  continue: { help: '/continue — продолжить последний ответ', aliases: ['cont'], fn: () => continueMessage() },
-  regen: { help: '/regen — перегенерировать последний ответ', aliases: ['regenerate', 'swipe'], fn: () => regenerateLast() },
+  continue: { help: t('/continue — continue the last reply'), aliases: ['cont'], fn: () => continueMessage() },
+  regen: { help: t('/regen — regenerate the last reply'), aliases: ['regenerate', 'swipe'], fn: () => regenerateLast() },
   impersonate: {
     help: '/impersonate [continue|variants|action|voice] — Impersonate+',
     aliases: ['imp'],
     fn: (p) => impersonate((['continue', 'variants', 'action', 'voice'].includes(p.text) ? p.text : undefined) as ImpersonateMode | undefined),
   },
   gen: {
-    help: '/gen инструкция — тихая генерация с контекстом чата, результат в {{pipe}}',
+    help: t('/gen instruction — quiet generation with the chat context, result in {{pipe}}'),
     fn: async (p, pipe) => quietGenerate(p.text || pipe, { label: '/gen' }),
   },
   genraw: {
-    help: '/genraw промпт — генерация без контекста чата',
+    help: t('/genraw prompt — generation without the chat context'),
     fn: async (p, pipe) => utilityGenerate('utility', [{ role: 'user', content: p.text || pipe }], { label: '/genraw' }),
   },
   del: {
-    help: '/del N — удалить N последних сообщений',
+    help: t('/del N — delete the last N messages'),
     fn: (p) => {
       const n = Math.max(1, Number(p.text) || 1);
       const msgs = getState().chat?.messages || [];
@@ -165,34 +166,34 @@ const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[]
     },
   },
   cut: {
-    help: '/cut 3 или /cut 3-5 — удалить сообщения по номерам (с нуля)',
+    help: t('/cut 3 or /cut 3-5 — delete messages by number (from zero)'),
     fn: (p) => {
       const msgs = getState().chat?.messages || [];
       deleteMessages(parseRange(p.text, msgs.length).map((i) => msgs[i].id));
     },
   },
   hide: {
-    help: '/hide 3-5 — скрыть сообщения от модели',
+    help: t('/hide 3-5 — hide messages from the model'),
     fn: (p) => {
       const msgs = getState().chat?.messages || [];
       setHidden(parseRange(p.text || '-1', msgs.length).map((i) => msgs[i].id), true);
     },
   },
   unhide: {
-    help: '/unhide 3-5 — вернуть сообщения в контекст',
+    help: t('/unhide 3-5 — bring messages back into the context'),
     fn: (p) => {
       const msgs = getState().chat?.messages || [];
       setHidden(parseRange(p.text || '-1', msgs.length).map((i) => msgs[i].id), false);
     },
   },
-  echo: { help: '/echo текст — показать уведомление', fn: (p, pipe) => toast(p.text || pipe) },
+  echo: { help: t('/echo text — show a notification'), fn: (p, pipe) => toast(p.text || pipe) },
   setvar: {
-    help: '/setvar key=имя значение',
+    help: t('/setvar key=name value'),
     fn: (p, pipe) => setVar(p.args.key || p.args.name || '', p.text || pipe),
   },
-  getvar: { help: '/getvar имя', fn: (p) => vars()[p.args.key || p.text] ?? '' },
+  getvar: { help: t('/getvar name'), fn: (p) => vars()[p.args.key || p.text] ?? '' },
   addvar: {
-    help: '/addvar key=имя число',
+    help: t('/addvar key=name number'),
     fn: (p, pipe) => {
       const k = p.args.key || '';
       const cur = vars()[k] ?? '';
@@ -200,71 +201,71 @@ const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[]
       setVar(k, Number.isFinite(Number(cur || 0)) && Number.isFinite(Number(add)) ? String(Number(cur || 0) + Number(add)) : cur + add);
     },
   },
-  incvar: { help: '/incvar имя', fn: (p) => setVar(p.text, String((Number(vars()[p.text]) || 0) + 1)) },
-  decvar: { help: '/decvar имя', fn: (p) => setVar(p.text, String((Number(vars()[p.text]) || 0) - 1)) },
+  incvar: { help: t('/incvar name'), fn: (p) => setVar(p.text, String((Number(vars()[p.text]) || 0) + 1)) },
+  decvar: { help: t('/decvar name'), fn: (p) => setVar(p.text, String((Number(vars()[p.text]) || 0) - 1)) },
   flushvar: {
-    help: '/flushvar имя — удалить переменную',
+    help: t('/flushvar name — delete a variable'),
     fn: (p) => setChat((c) => {
       const v = { ...c.meta.variables };
       delete v[p.text];
       return { ...c, meta: { ...c.meta, variables: v } };
     }),
   },
-  setglobalvar: { help: '/setglobalvar key=имя значение', fn: (p, pipe) => setVar(p.args.key || '', p.text || pipe, true) },
-  getglobalvar: { help: '/getglobalvar имя', fn: (p) => getState().settings.globalVariables[p.args.key || p.text] ?? '' },
+  setglobalvar: { help: t('/setglobalvar key=name value'), fn: (p, pipe) => setVar(p.args.key || '', p.text || pipe, true) },
+  getglobalvar: { help: t('/getglobalvar name'), fn: (p) => getState().settings.globalVariables[p.args.key || p.text] ?? '' },
   listvar: {
-    help: '/listvar — показать переменные чата',
+    help: t('/listvar — show the chat variables'),
     fn: () => {
       const v = vars();
-      toast(Object.keys(v).length ? Object.entries(v).map(([k, x]) => `${k} = ${x}`).join('\n') : 'Переменных нет');
+      toast(Object.keys(v).length ? Object.entries(v).map(([k, x]) => `${k} = ${x}`).join('\n') : t('No variables'));
     },
   },
   roll: {
-    help: '/roll 2d6+1 — бросок кубиков',
+    help: t('/roll 2d6+1 — roll dice'),
     aliases: ['r'],
     fn: (p) => {
       const r = rollDice(p.text || '1d20');
-      if (!r) throw new Error('Формат: /roll 2d6+1');
+      if (!r) throw new Error(t('Format: /roll 2d6+1'));
       const persona = activePersona();
-      addMessage('system', 'Кубики', `🎲 ${persona?.name || 'Ты'} бросает ${p.text || '1d20'}: **${r.total}** (${r.detail})`);
+      addMessage('system', 'Dice', `🎲 ${persona?.name || 'You'} rolls ${p.text || '1d20'}: **${r.total}** (${r.detail})`);
       return String(r.total);
     },
   },
   persona: {
-    help: '/persona имя — сменить персону',
+    help: t('/persona name — switch the persona'),
     fn: (p) => {
       const found = getState().personas.find((x) => x.name.toLowerCase() === p.text.toLowerCase());
-      if (!found) throw new Error(`Персона «${p.text}» не найдена`);
+      if (!found) throw new Error(t('Persona “{text}” not found', { text: p.text }));
       updateSettings({ activePersonaId: found.id });
     },
   },
   preset: {
-    help: '/preset имя — сменить пресет',
+    help: t('/preset name — switch the preset'),
     fn: (p) => {
       const found = getState().presets.find((x) => x.name.toLowerCase() === p.text.toLowerCase());
-      if (!found) throw new Error(`Пресет «${p.text}» не найден`);
+      if (!found) throw new Error(t('Preset “{text}” not found', { text: p.text }));
       updateSettings({ activePresetId: found.id });
     },
   },
   profile: {
-    help: '/profile имя — сменить подключение для чата',
+    help: t('/profile name — switch the connection for the chat'),
     fn: (p) => {
       const found = getState().connections.find((x) => x.name.toLowerCase() === p.text.toLowerCase());
-      if (!found) throw new Error(`Профиль «${p.text}» не найден`);
+      if (!found) throw new Error(t('Profile “{text}” not found', { text: p.text }));
       updateSettings((s) => ({ profileFor: { ...s.profileFor, chat: found.id } }));
     },
   },
   go: {
-    help: '/go имя — открыть персонажа',
+    help: t('/go name — open a character'),
     aliases: ['char'],
     fn: async (p) => {
       const found = getState().characters.find((x) => x.name.toLowerCase().includes(p.text.toLowerCase()));
-      if (!found) throw new Error(`Персонаж «${p.text}» не найден`);
+      if (!found) throw new Error(t('Character “{text}” not found', { text: p.text }));
       await openCharacter(found.id);
     },
   },
   newchat: {
-    help: '/newchat — начать новый чат',
+    help: t('/newchat — start a new chat'),
     aliases: ['new'],
     fn: async () => {
       const chat = getState().chat;
@@ -272,13 +273,13 @@ const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[]
     },
   },
   bg: {
-    help: '/bg ссылка|none — фон этого чата',
+    help: t('/bg link|none — background of this chat'),
     aliases: ['background'],
     fn: (p) => setChat((c) => ({ ...c, meta: { ...c.meta, background: p.text === 'none' ? undefined : p.text } })),
   },
-  memory: { help: '/memory — сжать текущую главу в Memory Book', fn: () => summarizeChapter() },
+  memory: { help: t('/memory — condense the current chapter into the Memory Book'), fn: () => summarizeChapter() },
   image: {
-    help: '/image [scene|portrait|промпт] — сгенерировать картинку',
+    help: t('/image [scene|portrait|prompt] — generate an image'),
     aliases: ['img', 'sd'],
     fn: async (p) => {
       const { buildImagePrompt, generateImages, insertImageMessage } = await import('./images');
@@ -290,7 +291,7 @@ const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[]
     },
   },
   translate: {
-    help: '/translate [номер] — перевести сообщение',
+    help: t('/translate [number] — translate a message'),
     fn: async (p) => {
       const msgs = getState().chat?.messages || [];
       const idx = p.text ? parseRange(p.text, msgs.length)[0] : msgs.length - 1;
@@ -298,7 +299,7 @@ const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[]
     },
   },
   speak: {
-    help: '/speak [текст] — озвучить',
+    help: t('/speak [text] — read aloud'),
     aliases: ['tts'],
     fn: async (p) => {
       const { speak } = await import('./tts');
@@ -307,19 +308,19 @@ const COMMANDS: Record<string, { fn: CommandFn; help: string; aliases?: string[]
     },
   },
   theme: {
-    help: '/theme day|night — день или ночь',
+    help: t('/theme day|night — day or night'),
     fn: (p) => updateSettings((s) => ({ theme: { ...s.theme, mode: p.text === 'night' ? 'night' : 'day' } })),
   },
   input: {
-    help: '/input вопрос — спросить значение у игрока',
-    fn: (p) => window.prompt(p.text || 'Введите значение') ?? '',
+    help: t('/input question — ask the player for a value'),
+    fn: (p) => window.prompt(p.text || t('Enter a value')) ?? '',
   },
   open: {
-    help: '/open раздел — открыть раздел (library, presets, memory…)',
+    help: t('/open section — open a section (library, presets, memory…)'),
     fn: (p) => navigate((p.text || 'chat') as Parameters<typeof navigate>[0]),
   },
   help: {
-    help: '/help — список команд',
+    help: t('/help — list of commands'),
     fn: () => {
       toast(
         Object.values(COMMANDS)
@@ -351,7 +352,7 @@ export async function runSlash(script: string): Promise<string> {
     if (!p) continue;
     const name = COMMANDS[p.name] ? p.name : ALIASES[p.name];
     if (!name) {
-      toast(`Неизвестная команда /${p.name}. Список: /help`, 'warn');
+      toast(t('Unknown command /{name}. List: /help', { name: p.name }), 'warn');
       return pipe;
     }
     try {

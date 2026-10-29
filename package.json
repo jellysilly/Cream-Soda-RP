@@ -1,7 +1,7 @@
 {
   "name": "cream-soda-rp",
   "version": "1.4.2",
-  "description": "Cream Soda — фронтенд для ролевых чатов с ИИ в духе SillyTavern: движок, сервер и интерфейс в одном пакете.",
+  "description": "Cream Soda — a SillyTavern-style frontend for AI roleplay chats: the engine, the server and the interface in one package.",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-or-later",

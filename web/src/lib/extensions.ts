@@ -6,6 +6,7 @@ import { quietGenerate, sendUserMessage, generateReplies, macroEnvFor, utilityGe
 import { registerSlashCommand, runSlash } from './slash';
 import { substituteMacros } from './macros';
 import { newMessage } from './defaults';
+import { t } from './i18n';
 
 /**
  * Third-party extensions. Each one is loaded as an ES module from
@@ -73,7 +74,7 @@ function context() {
     groups: s.groups,
     characterId: char?.id,
     groupId: chat?.ownerType === 'group' ? chat.ownerId : undefined,
-    name1: persona?.name || 'Ты',
+    name1: persona?.name || 'You',
     name2: char?.name || '',
     chatMetadata: chat?.meta || {},
     variables: { local: chat?.meta.variables || {}, global: s.settings.globalVariables },
@@ -83,13 +84,13 @@ function context() {
     eventSource: { on: onEvent, makeLast: onEvent, makeFirst: onEvent, emit: emitEvent, removeListener: () => {} },
     eventTypes: EVENT_TYPES,
     event_types: EVENT_TYPES,
-    generateQuietPrompt: (prompt: string) => quietGenerate(prompt, { label: 'Расширение · тихая генерация' }),
+    generateQuietPrompt: (prompt: string) => quietGenerate(prompt, { label: t('Extension · quiet generation') }),
     generateRaw: (prompt: string, _api?: unknown, _instruct?: unknown, _quiet?: unknown, systemPrompt?: string) =>
-      utilityGenerate('utility', [...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []), { role: 'user' as const, content: prompt }], { label: 'Расширение' }),
+      utilityGenerate('utility', [...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []), { role: 'user' as const, content: prompt }], { label: t('Extension') }),
     sendMessage: (text: string) => sendUserMessage(text),
     triggerGeneration: () => generateReplies(),
     addSystemMessage: (text: string, hidden = false) => {
-      const msg = { ...newMessage({ role: 'system', name: 'Система', text }), hidden };
+      const msg = { ...newMessage({ role: 'system', name: 'System', text }), hidden };
       setChat((c) => ({ ...c, messages: [...c.messages, msg] }));
     },
     substituteParams: (text: string) => substituteMacros(text, macroEnvFor()),

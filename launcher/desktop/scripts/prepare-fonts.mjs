@@ -38,7 +38,7 @@ function parseRanges(range) {
 }
 
 if (!fs.existsSync(fontsource)) {
-  console.error('Не найден web/node_modules/@fontsource — выполните npm install в корне проекта');
+  console.error('web/node_modules/@fontsource not found: run npm install in the project root');
   process.exit(1);
 }
 fs.mkdirSync(out, { recursive: true });
@@ -63,4 +63,4 @@ for (const [family, weight] of FACES) {
   }
 }
 fs.writeFileSync(path.join(out, 'fonts.css'), css);
-console.log(`[fonts] скопировано файлов: ${copied}`);
+console.log(`[fonts] files copied: ${copied}`);

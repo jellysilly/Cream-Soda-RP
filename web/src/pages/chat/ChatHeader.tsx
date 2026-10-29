@@ -6,6 +6,7 @@ import { toggleNight, exportChat, deleteChat, renameChat, uploadImage } from '..
 import { fmtK, fmtNum, pickFiles } from '../../lib/utils';
 import { startNewChat, generateReplies } from '../../lib/generate';
 import { ChatsModal } from './ChatsModal';
+import { t } from '../../lib/i18n';
 
 export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () => void; onContext: () => void; searchOpen: boolean }) {
   const chat = useStore((s) => s.chat);
@@ -25,38 +26,38 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
   const bookNames = [...new Set([...(char?.worldIds || []), ...chat.meta.worldIds])]
     .map((id) => worlds.find((w) => w.id === id)?.name)
     .filter(Boolean);
-  const name = char?.name || group?.name || 'Чат';
+  const name = char?.name || group?.name || t('Chat');
 
   const moreMenu = (el: HTMLElement) =>
     openMenu(el, [
-      { label: 'Контекст сцены', icon: 'memory', onClick: onContext },
-      { label: 'Поиск по чату', icon: 'search', onClick: onSearch },
-      { label: 'Ветки чата', icon: 'branch', onClick: () => setChatsOpen('branches') },
-      { label: night ? 'Дневная тема' : 'Ночная тема', icon: night ? 'sun' : 'moon', onClick: toggleNight },
+      { label: t('Scene context'), icon: 'memory', onClick: onContext },
+      { label: t('Search the chat'), icon: 'search', onClick: onSearch },
+      { label: t('Chat branches'), icon: 'branch', onClick: () => setChatsOpen('branches') },
+      { label: night ? t('Day theme') : t('Night theme'), icon: night ? 'sun' : 'moon', onClick: toggleNight },
       { separator: true, label: '' },
-      { label: 'Новый чат', icon: 'plus', onClick: () => startNewChat(chat.ownerType, chat.ownerId) },
-      { label: 'Все чаты', icon: 'list', onClick: () => setChatsOpen('all') },
+      { label: t('New chat'), icon: 'plus', onClick: () => startNewChat(chat.ownerType, chat.ownerId) },
+      { label: t('All chats'), icon: 'list', onClick: () => setChatsOpen('all') },
       {
-        label: 'Переименовать чат',
+        label: t('Rename the chat'),
         icon: 'edit',
         onClick: async () => {
-          const t = await promptDialog('Название чата', { value: chat.title });
-          if (t) renameChat(chat.id, t);
+          const newTitle = await promptDialog(t('Chat title'), { value: chat.title });
+          if (newTitle) renameChat(chat.id, newTitle);
         },
       },
-      { label: 'Карточка персонажа', icon: 'chars', hidden: !char, onClick: () => navigate('library', `char:${char!.id}`) },
-      { label: 'Настройки группы', icon: 'group', hidden: !group, onClick: () => navigate('library', `group:${group!.id}`) },
+      { label: t('Character card'), icon: 'chars', hidden: !char, onClick: () => navigate('library', `char:${char!.id}`) },
+      { label: t('Group settings'), icon: 'group', hidden: !group, onClick: () => navigate('library', `group:${group!.id}`) },
       { separator: true, label: '' },
       {
-        label: 'Сценарий только для этого чата',
+        label: t('Scenario for this chat only'),
         icon: 'note',
         onClick: async () => {
-          const t = await promptDialog('Сценарий чата (заменяет сценарий карточки)', { value: chat.meta.scenarioOverride || '', multiline: true });
-          if (t !== null) setChat((c) => ({ ...c, meta: { ...c.meta, scenarioOverride: t.trim() || undefined } }));
+          const newScenario = await promptDialog(t("Chat scenario (replaces the card's scenario)"), { value: chat.meta.scenarioOverride || '', multiline: true });
+          if (newScenario !== null) setChat((c) => ({ ...c, meta: { ...c.meta, scenarioOverride: newScenario.trim() || undefined } }));
         },
       },
       {
-        label: 'Лорбуки чата',
+        label: t('Chat lorebooks'),
         icon: 'memory',
         onClick: () =>
           openMenu(el, [
@@ -68,11 +69,11 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
                   meta: { ...c.meta, worldIds: c.meta.worldIds.includes(w.id) ? c.meta.worldIds.filter((x) => x !== w.id) : [...c.meta.worldIds, w.id] },
                 })),
             })),
-            ...(worlds.length ? [] : [{ label: 'Лорбуков пока нет', disabled: true }]),
+            ...(worlds.length ? [] : [{ label: t('No lorebooks yet'), disabled: true }]),
           ]),
       },
       {
-        label: 'Фон чата…',
+        label: t('Chat background…'),
         icon: 'images',
         onClick: async () => {
           const [f] = await pickFiles('image/*');
@@ -82,16 +83,16 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
           }
         },
       },
-      { label: 'Убрать фон чата', icon: 'close', hidden: !chat.meta.background, onClick: () => setChat((c) => ({ ...c, meta: { ...c.meta, background: undefined } })) },
+      { label: t('Remove the chat background'), icon: 'close', hidden: !chat.meta.background, onClick: () => setChat((c) => ({ ...c, meta: { ...c.meta, background: undefined } })) },
       { separator: true, label: '' },
-      { label: 'Экспорт · .jsonl', icon: 'upload', onClick: () => exportChat(chat.id, 'jsonl') },
-      { label: 'Экспорт · текст', icon: 'upload', onClick: () => exportChat(chat.id, 'txt') },
-      { label: 'Удалить чат', icon: 'trash', danger: true, onClick: () => deleteChat(chat.id) },
+      { label: t('Export · .jsonl'), icon: 'upload', onClick: () => exportChat(chat.id, 'jsonl') },
+      { label: t('Export · text'), icon: 'upload', onClick: () => exportChat(chat.id, 'txt') },
+      { label: t('Delete the chat'), icon: 'trash', danger: true, onClick: () => deleteChat(chat.id) },
     ]);
 
   return (
     <header className="cs-chat-header">
-      <button type="button" className="cs-icon-btn cs-mobile-only" style={{ background: 'transparent' }} aria-label="Чаты" onClick={() => setChatsOpen('all')}>
+      <button type="button" className="cs-icon-btn cs-mobile-only" style={{ background: 'transparent' }} aria-label={t('Chats')} onClick={() => setChatsOpen('all')}>
         <Icon name="left" size={20} stroke={2.2} />
       </button>
       {group ? (
@@ -105,7 +106,7 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
                 key={id}
                 type="button"
                 aria-pressed={muted}
-                title={`${c.name}: нажми — ответит, долгое нажатие/ПКМ — заглушить`}
+                title={t('{name}: tap to make them reply, long press/right click to mute', { name: c.name })}
                 disabled={generating}
                 onClick={() => generateReplies(id)}
                 onContextMenu={(e) => {
@@ -122,17 +123,17 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
       ) : (
         <Avatar src={char?.avatar} name={name} kana={char?.kana} palette={char?.palette} size={52} ring />
       )}
-      <button type="button" className="cs-chat-header__who" onClick={() => setChatsOpen('all')} title="Все чаты">
+      <button type="button" className="cs-chat-header__who" onClick={() => setChatsOpen('all')} title={t('All chats')}>
         <div className="cs-chat-header__name">
           <h1 className="cs-ellipsis">{name}</h1>
           {char?.tagline ? <span className="cs-chat-header__tag">{char.tagline}</span> : null}
         </div>
         <div className="cs-chat-header__sub cs-ellipsis">
           <span className="cs-chat-header__sub--desktop">
-            Чат «{chat.title}»{bookNames.length ? ` · лорбук «${bookNames.join('», «')}»` : ''}
+            {t('Chat “{title}”', { title: chat.title })}{bookNames.length ? t(' · lorebook “{bookNames}”', { bookNames: bookNames.join('», «') }) : ''}
           </span>
           <span className="cs-mobile-only-inline">
-            {preset?.name} · {fmtK(tokens)} ток.
+            {t('{name} · {tokens} tok.', { name: preset?.name, tokens: fmtK(tokens) })}
           </span>
         </div>
       </button>
@@ -144,15 +145,15 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
             e.preventDefault();
             navigate('presets');
           }}
-          title="Пресет"
+          title={t('Preset')}
         >
           <span className="cs-dot cs-dot--sm" />
-          <span className="cs-ellipsis">{preset?.name || 'Пресет'}</span>
+          <span className="cs-ellipsis">{preset?.name || t('Preset')}</span>
         </a>
         <a
           href="#/settings/connections"
           className="cs-chip-link"
-          title={conn ? `${conn.name} · ${conn.model}` : 'Подключение не настроено'}
+          title={conn ? `${conn.name} · ${conn.model}` : t('No connection set up')}
           onClick={(e) => {
             e.preventDefault();
             openMenu(e.currentTarget, [
@@ -161,34 +162,34 @@ export function ChatHeader({ onSearch, onContext, searchOpen }: { onSearch: () =
                 onClick: () => updateSettings((s) => ({ profileFor: { ...s.profileFor, chat: c.id } })),
               })),
               { separator: true, label: '' },
-              { label: 'Настроить подключения', icon: 'settings', onClick: () => navigate('settings', 'connections') },
+              { label: t('Set up connections'), icon: 'settings', onClick: () => navigate('settings', 'connections') },
             ]);
           }}
         >
           {conn ? <span className={`cs-dot cs-dot--sm${conn.status && !conn.status.ok ? ' cs-dot--danger' : ''}`} /> : null}
-          <span className="cs-ellipsis">{conn ? conn.model || conn.name : '[нет подключения]'}</span>
+          <span className="cs-ellipsis">{conn ? conn.model || conn.name : t('[no connection]')}</span>
         </a>
         <button
           type="button"
           className={`cs-token-pill${tokens > ctx ? ' cs-token-pill--over' : ''}`}
-          title="Размер последнего запроса / контекст. Нажми, чтобы посмотреть запрос."
+          title={t('Size of the last request / context. Click to see the request.')}
           onClick={() => navigate('presets', 'preview')}
         >
           {fmtNum(tokens)} / {fmtK(ctx)}
         </button>
-        <button type="button" className="cs-icon-btn" aria-label={night ? 'Дневная тема' : 'Ночная тема'} title={night ? 'Дневная тема' : 'Ночная тема'} onClick={toggleNight}>
+        <button type="button" className="cs-icon-btn" aria-label={night ? t('Day theme') : t('Night theme')} title={night ? t('Day theme') : t('Night theme')} onClick={toggleNight}>
           <Icon name={night ? 'sun' : 'moon'} size={20} />
         </button>
-        <button type="button" className="cs-icon-btn" aria-label="Ветки чата" title="Ветки чата" onClick={() => setChatsOpen('branches')}>
+        <button type="button" className="cs-icon-btn" aria-label={t('Chat branches')} title={t('Chat branches')} onClick={() => setChatsOpen('branches')}>
           <Icon name="branch" size={20} />
         </button>
-        <button type="button" className={`cs-icon-btn${searchOpen ? ' cs-icon-btn--active' : ''}`} aria-label="Поиск по чату" title="Поиск по чату" onClick={onSearch}>
+        <button type="button" className={`cs-icon-btn${searchOpen ? ' cs-icon-btn--active' : ''}`} aria-label={t('Search the chat')} title={t('Search the chat')} onClick={onSearch}>
           <Icon name="search" size={20} />
         </button>
-        <button type="button" className="cs-icon-btn cs-context-btn" aria-label="Контекст сцены" title="Контекст сцены" onClick={onContext}>
+        <button type="button" className="cs-icon-btn cs-context-btn" aria-label={t('Scene context')} title={t('Scene context')} onClick={onContext}>
           <Icon name="memory" size={20} />
         </button>
-        <button type="button" className="cs-icon-btn cs-keep-mobile" aria-label="Меню чата" title="Меню чата" onClick={(e) => moreMenu(e.currentTarget)}>
+        <button type="button" className="cs-icon-btn cs-keep-mobile" aria-label={t('Chat menu')} title={t('Chat menu')} onClick={(e) => moreMenu(e.currentTarget)}>
           <Icon name="more" size={20} />
         </button>
       </div>

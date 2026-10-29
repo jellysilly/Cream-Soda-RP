@@ -37,7 +37,7 @@ export function loadTokenizer(kind: 'auto' | 'o200k' | 'cl100k' | 'estimate' = '
   if (loading) return loading;
   loading = (kind === 'cl100k' ? import('gpt-tokenizer/encoding/cl100k_base') : import('gpt-tokenizer/encoding/o200k_base'))
     .then((mod) => {
-      encoder = { countTokens: (t: string) => mod.countTokens(t) };
+      encoder = { countTokens: (text: string) => mod.countTokens(text) };
       cache.clear();
       useTokenizer.setState((s) => ({ version: s.version + 1, kind: kind === 'cl100k' ? 'cl100k' : 'o200k' }));
     })

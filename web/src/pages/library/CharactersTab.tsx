@@ -4,12 +4,13 @@ import { Avatar, Field, openMenu, Empty } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { newCharacter, newGroup, newPersona } from '../../lib/defaults';
 import { countTokens } from '../../lib/tokenizer';
-import { fmtNum, paletteFor, plural, toKana } from '../../lib/utils';
+import { fmtNum, paletteFor, toKana } from '../../lib/utils';
 import { openCharacter, openGroup, startNewChat } from '../../lib/generate';
 import { deleteCharacter, duplicateCharacter, exportCharacter } from '../../lib/appActions';
 import { CharacterEditor } from './CharacterEditor';
 import { GroupEditor } from './GroupEditor';
 import type { Character, Group } from '../../lib/types';
+import { locale, t, tn } from '../../lib/i18n';
 
 export function charTokens(c: Character) {
   return countTokens([c.description, c.personality, c.scenario, c.exampleMessages, c.systemPrompt, c.postHistoryInstructions].join('\n'));
@@ -28,14 +29,14 @@ function CharCard({ c, selected, onSelect }: { c: Character; selected: boolean; 
       onContextMenu={(e) => {
         e.preventDefault();
         openMenu(e, [
-          { label: 'Начать чат', icon: 'chat', onClick: () => openCharacter(c.id) },
-          { label: 'Новый чат', icon: 'plus', onClick: () => startNewChat('character', c.id).then(() => navigate('chat')) },
-          { label: c.fav ? 'Убрать из избранного' : 'В избранное', icon: 'star', onClick: () => patchItem('characters', c.id, { fav: !c.fav }) },
-          { label: 'Экспорт PNG', icon: 'upload', onClick: () => exportCharacter(c, 'png').catch((err) => toastError(err)) },
-          { label: 'Экспорт JSON', icon: 'upload', onClick: () => exportCharacter(c, 'json') },
-          { label: 'Дублировать', icon: 'copy', onClick: () => duplicateCharacter(c) },
+          { label: t('Start a chat'), icon: 'chat', onClick: () => openCharacter(c.id) },
+          { label: t('New chat'), icon: 'plus', onClick: () => startNewChat('character', c.id).then(() => navigate('chat')) },
+          { label: c.fav ? t('Remove from favorites') : t('Add to favorites'), icon: 'star', onClick: () => patchItem('characters', c.id, { fav: !c.fav }) },
+          { label: t('Export PNG'), icon: 'upload', onClick: () => exportCharacter(c, 'png').catch((err) => toastError(err)) },
+          { label: t('Export JSON'), icon: 'upload', onClick: () => exportCharacter(c, 'json') },
+          { label: t('Duplicate'), icon: 'copy', onClick: () => duplicateCharacter(c) },
           { separator: true, label: '' },
-          { label: 'Удалить', icon: 'trash', danger: true, onClick: () => deleteCharacter(c) },
+          { label: t('Delete'), icon: 'trash', danger: true, onClick: () => deleteCharacter(c) },
         ]);
       }}
     >
@@ -43,9 +44,9 @@ function CharCard({ c, selected, onSelect }: { c: Character; selected: boolean; 
         <div className="cs-char-card__kana" aria-hidden="true">
           {c.kana || toKana(c.name)}
         </div>
-        {c.avatar ? <img src={c.avatar} alt="" loading="lazy" /> : <span className="cs-char-card__badge">[аватар]</span>}
+        {c.avatar ? <img src={c.avatar} alt="" loading="lazy" /> : <span className="cs-char-card__badge">{t('[avatar]')}</span>}
         {c.fav ? (
-          <span className="cs-char-card__fav" aria-label="Избранное">
+          <span className="cs-char-card__fav" aria-label={t('Favorites')}>
             <Icon name="starFill" size={16} />
           </span>
         ) : null}
@@ -54,7 +55,7 @@ function CharCard({ c, selected, onSelect }: { c: Character; selected: boolean; 
         <span className="cs-char-card__name cs-ellipsis">{c.name}</span>
         <span className="cs-char-card__tagline cs-ellipsis">{c.tagline}</span>
         <span className="cs-char-card__meta">
-          <span className="cs-ellipsis">{c.tags.slice(0, 2).join(' · ') || 'без тегов'}</span>
+          <span className="cs-ellipsis">{c.tags.slice(0, 2).join(' · ') || t('no tags')}</span>
           <span>{fmtNum(tokens)}</span>
         </span>
       </div>
@@ -73,16 +74,16 @@ function GroupCard({ g, selected, onSelect }: { g: Group; selected: boolean; onS
             <Avatar key={m.id} src={m.avatar} name={m.name} kana={m.kana} palette={m.palette} size={100} />
           ))}
         </div>
-        <span className="cs-char-card__badge">группа</span>
+        <span className="cs-char-card__badge">{t('group')}</span>
       </div>
       <div className="cs-char-card__info">
         <span className="cs-char-card__name cs-ellipsis">{g.name}</span>
-        <span className="cs-char-card__tagline cs-ellipsis">{members.map((m) => m.name).join(', ') || 'пока пусто'}</span>
+        <span className="cs-char-card__tagline cs-ellipsis">{members.map((m) => m.name).join(', ') || t('empty so far')}</span>
         <span className="cs-char-card__meta">
           <span>
-            {members.length} {plural(members.length, 'участник', 'участника', 'участников')}
+            {members.length} {tn(members.length, 'member|members')}
           </span>
-          <span>{g.activation === 'manual' ? 'вручную' : g.activation === 'list' ? 'по списку' : 'естественно'}</span>
+          <span>{g.activation === 'manual' ? t('manual') : g.activation === 'list' ? t('by list') : t('natural')}</span>
         </span>
       </div>
     </button>
@@ -100,7 +101,7 @@ function CharacterAside({ c }: { c: Character }) {
   const scoped = regex.filter((r) => r.scope.type === 'character' && r.scope.id === c.id);
   const preset = presets.find((p) => p.id === c.presetId);
   return (
-    <aside className="cs-panel cs-panel--strong cs-panel--pad-lg cs-col-side" aria-label="Карточка персонажа" style={{ flex: '1 1 360px' }}>
+    <aside className="cs-panel cs-panel--strong cs-panel--pad-lg cs-col-side" aria-label={t('Character card')} style={{ flex: '1 1 360px' }}>
       <div className="cs-row" style={{ gap: 12 }}>
         <Avatar src={c.avatar} name={c.name} kana={c.kana} palette={c.palette} size={64} ring />
         <div className="cs-grow">
@@ -108,64 +109,64 @@ function CharacterAside({ c }: { c: Character }) {
             {c.name}
           </h2>
           <div className="cs-sub">
-            V2-карточка · {fmtNum(tokens)} ток. · {greetings} {plural(greetings, 'приветствие', 'приветствия', 'приветствий')}
+            {t('V2 card · {tokens} tok. · {greetings} {x}', { tokens: fmtNum(tokens), greetings, x: tn(greetings, 'greeting|greetings') })}
           </div>
         </div>
         <button
           type="button"
           className="cs-icon-btn cs-icon-btn--soft"
-          aria-label="Действия"
+          aria-label={t('Actions')}
           onClick={(e) =>
             openMenu(e.currentTarget, [
-              { label: 'Экспорт PNG', icon: 'upload', onClick: () => exportCharacter(c, 'png').catch((err) => toastError(err)) },
-              { label: 'Экспорт JSON', icon: 'upload', onClick: () => exportCharacter(c, 'json') },
-              { label: 'Дублировать', icon: 'copy', onClick: () => duplicateCharacter(c) },
-              { label: c.fav ? 'Убрать из избранного' : 'В избранное', icon: 'star', onClick: () => set({ fav: !c.fav }) },
-              { label: 'Новый чат', icon: 'plus', onClick: () => startNewChat('character', c.id).then(() => navigate('chat')) },
+              { label: t('Export PNG'), icon: 'upload', onClick: () => exportCharacter(c, 'png').catch((err) => toastError(err)) },
+              { label: t('Export JSON'), icon: 'upload', onClick: () => exportCharacter(c, 'json') },
+              { label: t('Duplicate'), icon: 'copy', onClick: () => duplicateCharacter(c) },
+              { label: c.fav ? t('Remove from favorites') : t('Add to favorites'), icon: 'star', onClick: () => set({ fav: !c.fav }) },
+              { label: t('New chat'), icon: 'plus', onClick: () => startNewChat('character', c.id).then(() => navigate('chat')) },
               { separator: true, label: '' },
-              { label: 'Удалить', icon: 'trash', danger: true, onClick: () => deleteCharacter(c) },
+              { label: t('Delete'), icon: 'trash', danger: true, onClick: () => deleteCharacter(c) },
             ])
           }
         >
           <Icon name="dots" size={18} />
         </button>
       </div>
-      <Field label="Описание">
+      <Field label={t('Description')}>
         <textarea className="cs-textarea" rows={4} value={c.description} onChange={(e) => set({ description: e.target.value })} />
       </Field>
-      <Field label="Сценарий">
+      <Field label={t('Scenario')}>
         <textarea className="cs-textarea" rows={2} value={c.scenario} onChange={(e) => set({ scenario: e.target.value })} />
       </Field>
       <div className="cs-col" style={{ gap: 6 }}>
-        <span className="cs-label">Привязано</span>
+        <span className="cs-label">{t('Linked')}</span>
         <div className="cs-linked">
           {c.worldIds.map((id) => {
             const w = worlds.find((x) => x.id === id);
             return w ? (
               <button key={id} type="button" className="cs-pill cs-pill--lilac cs-pill--lg" style={{ border: 'none' }} onClick={() => navigate('library', `lore:${id}`)}>
-                Лорбук · {w.name}
+                {t('Lorebook · {name}', { name: w.name })}
               </button>
             ) : null;
           })}
           {scoped.map((r) => (
             <button key={r.id} type="button" className="cs-pill cs-pill--lg" style={{ border: 'none' }} onClick={() => navigate('regex', r.id)}>
-              Регекс · {r.name}
+              {t('Regex · {name}', { name: r.name })}
             </button>
           ))}
           {preset ? (
             <button type="button" className="cs-pill cs-pill--mint cs-pill--lg" style={{ border: 'none' }} onClick={() => navigate('presets')}>
-              Пресет · {preset.name}
+              {t('Preset · {name}', { name: preset.name })}
             </button>
           ) : null}
-          {!c.worldIds.length && !scoped.length && !preset ? <span className="cs-hint">Ничего — привяжи лорбук или пресет в «Все поля»</span> : null}
+          {!c.worldIds.length && !scoped.length && !preset ? <span className="cs-hint">{t('Nothing: link a lorebook or a preset in “All fields”')}</span> : null}
         </div>
       </div>
       <div className="cs-row cs-row--wrap" style={{ marginTop: 4 }}>
         <button type="button" className="cs-btn cs-btn--primary cs-btn--flex" onClick={() => openCharacter(c.id)}>
-          Начать чат
+          {t('Start a chat')}
         </button>
         <button type="button" className="cs-btn cs-btn--flex" onClick={() => setFull(true)}>
-          Все поля
+          {t('All fields')}
         </button>
       </div>
       {full ? <CharacterEditor character={c} onClose={() => setFull(false)} /> : null}
@@ -179,7 +180,7 @@ export function PersonasStrip() {
   return (
     <section className="cs-panel cs-panel--flat" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
       <h2 className="cs-h2" style={{ fontSize: 17, marginRight: 8 }}>
-        Мои персоны
+        {t('My personas')}
       </h2>
       {personas.map((p) => (
         <button
@@ -192,16 +193,16 @@ export function PersonasStrip() {
         >
           <Avatar src={p.avatar} name={p.name} kana={p.kana} palette={p.palette} size={36} />
           {p.name}
-          {p.id === active ? ' · активна' : ''}
+          {p.id === active ? t(' · active') : ''}
         </button>
       ))}
       <button
         type="button"
         className="cs-icon-btn cs-icon-btn--dashed"
         style={{ width: 48, height: 48 }}
-        aria-label="Добавить персону"
+        aria-label={t('Add a persona')}
         onClick={() => {
-          const p = upsert('personas', newPersona({ name: 'Новая персона' }));
+          const p = upsert('personas', newPersona({ name: t('New persona') }));
           navigate('library', `persona:${p.id}`);
         }}
       >
@@ -228,8 +229,8 @@ export function CharactersTab({ query }: { query: string }) {
 
   const tags = useMemo(() => {
     const count = new Map<string, number>();
-    for (const c of characters) for (const t of c.tags) count.set(t, (count.get(t) || 0) + 1);
-    return [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([t]) => t);
+    for (const c of characters) for (const tag of c.tags) count.set(tag, (count.get(tag) || 0) + 1);
+    return [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([tag]) => tag);
   }, [characters]);
 
   const q = query.trim().toLowerCase();
@@ -240,7 +241,7 @@ export function CharactersTab({ query }: { query: string }) {
     if (filter.startsWith('tag:')) out = out.filter((c) => c.tags.includes(filter.slice(4)));
     out = [...out].sort((a, b) => {
       if (a.fav !== b.fav) return a.fav ? -1 : 1;
-      if (sort === 'name') return a.name.localeCompare(b.name, 'ru');
+      if (sort === 'name') return a.name.localeCompare(b.name, locale());
       if (sort === 'tokens') return charTokens(b) - charTokens(a);
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
@@ -258,10 +259,10 @@ export function CharactersTab({ query }: { query: string }) {
           <div className="cs-chips">
             {(
               [
-                ['all', 'Все'],
-                ['fav', 'Избранные'],
-                ['groups', `Группы · ${groups.length}`],
-                ...tags.map((t) => [`tag:${t}`, `#${t}`]),
+                ['all', t('All')],
+                ['fav', t('Favorites')],
+                ['groups', t('Groups · {n}', { n: groups.length })],
+                ...tags.map((tagName) => [`tag:${tagName}`, `#${tagName}`]),
               ] as [Filter, string][]
             ).map(([id, label]) => (
               <button key={id} type="button" className="cs-choice cs-choice--sm" aria-pressed={filter === id} onClick={() => setFilter(filter === id ? 'all' : id)}>
@@ -269,10 +270,10 @@ export function CharactersTab({ query }: { query: string }) {
               </button>
             ))}
           </div>
-          <select className="cs-select cs-select--sm cs-ml-auto" style={{ width: 170 }} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Сортировка">
-            <option value="recent">Недавние</option>
-            <option value="name">По имени</option>
-            <option value="tokens">По размеру</option>
+          <select className="cs-select cs-select--sm cs-ml-auto" style={{ width: 170 }} value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label={t('Sorting')}>
+            <option value="recent">{t('Recent')}</option>
+            <option value="name">{t('By name')}</option>
+            <option value="tokens">{t('By size')}</option>
           </select>
         </div>
         <div className="cs-card-grid">
@@ -287,29 +288,29 @@ export function CharactersTab({ query }: { query: string }) {
               type="button"
               className="cs-new-card"
               onClick={() => {
-                const c = upsert('characters', newCharacter({ name: 'Новый персонаж' }));
+                const c = upsert('characters', newCharacter({ name: t('New character') }));
                 setSelected(c.id);
               }}
             >
               <Icon name="plus" size={32} />
-              Новый персонаж
-              <span>вручную или по инструкции</span>
+              {t('New character')}
+              <span>{t('by hand or from an instruction')}</span>
             </button>
           ) : null}
           <button
             type="button"
             className="cs-new-card"
             onClick={() => {
-              const g = upsert('groups', newGroup({ name: 'Новая группа', memberIds: characters.slice(0, 2).map((c) => c.id) }));
+              const g = upsert('groups', newGroup({ name: t('New group'), memberIds: characters.slice(0, 2).map((c) => c.id) }));
               setSelected(g.id);
             }}
           >
             <Icon name="group" size={32} />
-            Новая группа
-            <span>групповой чат с несколькими персонажами</span>
+            {t('New group')}
+            <span>{t('a group chat with several characters')}</span>
           </button>
         </div>
-        {!list.length && !groupList.length && q ? <Empty icon="search" title="Никого не нашли" /> : null}
+        {!list.length && !groupList.length && q ? <Empty icon="search" title={t('Nobody found')} /> : null}
         <PersonasStrip />
       </div>
       {selChar ? <CharacterAside key={selChar.id} c={selChar} /> : selGroup ? <GroupEditor key={selGroup.id} group={selGroup} /> : null}

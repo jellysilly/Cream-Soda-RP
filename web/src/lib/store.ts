@@ -26,9 +26,12 @@ import {
   demoQuickReplies,
   demoRegexes,
   mergeSettings,
+  migrateLegacyPrompt,
   newPreset,
   seedPresets,
 } from './defaults';
+import { migratePreset } from './legacy';
+import { syncLang, t, translateMessage } from './i18n';
 import { debounce } from './utils';
 
 export type Route =
@@ -42,7 +45,7 @@ export type Route =
   | 'modules'
   | 'settings';
 
-export type SettingsTab = 'connections' | 'theme' | 'data' | 'chat' | 'launcher';
+export type SettingsTab = 'connections' | 'general' | 'theme' | 'prompts' | 'data' | 'chat' | 'launcher';
 
 export interface Toast {
   id: number;
@@ -124,7 +127,7 @@ export interface AppState {
   gen: GenState;
   streamText: string;
   streamReasoning: string;
-  /** Lore entries activated by the last generation (for «Активный лор»). */
+  /** Lore entries activated by the last generation (for «Active lore»). */
   activeLore: { uid: string; title: string; keys: string; state: 'active' | 'waiting' }[];
   lastPrompt: { messages: { role: string; content: string }[]; tokens: number; breakdown: Record<string, number> } | null;
   contextTokens: number;
@@ -189,11 +192,12 @@ let toastSeq = 1;
 export function toast(text: string, kind: Toast['kind'] = 'info', ms = 4200) {
   const id = toastSeq++;
   setState((s) => ({ toasts: [...s.toasts.slice(-4), { id, kind, text }] }));
-  setTimeout(() => setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms);
+  setTimeout(() => setState((s) => ({ toasts: s.toasts.filter((item) => item.id !== id) })), ms);
 }
 
 export function toastError(err: unknown, prefix = '') {
-  const msg = err instanceof Error ? err.message : String(err);
+  // Server and engine messages are English; known ones have a translation.
+  const msg = translateMessage(err instanceof Error ? err.message : String(err));
   toast(prefix ? `${prefix}: ${msg}` : msg, 'error', 7000);
 }
 
@@ -223,7 +227,7 @@ function persistItem(collection: CollectionName, item: { id: string }) {
   let fn = pending.get(key);
   if (!fn) {
     fn = debounce((data: { id: string }) => {
-      api.put(collection, data.id, data).catch((err) => toastError(err, 'Не удалось сохранить'));
+      api.put(collection, data.id, data).catch((err) => toastError(err, t('Could not save')));
     }, 450);
     pending.set(key, fn);
   }
@@ -266,7 +270,7 @@ export async function removeItem(collection: CollectionName, id: string, withCha
 
 // Settings are one document; saved debounced.
 const saveSettingsDebounced = debounce(() => {
-  api.putDoc('settings', getState().settings).catch((err) => toastError(err, 'Настройки не сохранились'));
+  api.putDoc('settings', getState().settings).catch((err) => toastError(err, t('Settings were not saved')));
 }, 600);
 
 function saveSettingsNow() {
@@ -285,8 +289,23 @@ export function updateSettingsSection<K extends keyof Settings>(key: K, patch: P
   updateSettings((s) => ({ [key]: { ...(s[key] as object), ...(patch as object) } }) as Partial<Settings>);
 }
 
+/** Switches the interface language: saves everything, then reloads the page in the new language. */
+export async function setLanguage(language: Settings['language']) {
+  for (const fn of pending.values()) fn.flush();
+  saveChatNow();
+  saveSettingsDebounced.cancel();
+  setState((st) => ({ settings: { ...st.settings, language } }));
+  try {
+    await api.putDoc('settings', getState().settings);
+  } catch (err) {
+    toastError(err, t('Settings were not saved'));
+    return;
+  }
+  if (syncLang(language)) location.reload();
+}
+
 const saveImageSettings = debounce(() => {
-  api.putDoc('imagegen', getState().imageSettings).catch((err) => toastError(err, 'Настройки картинок не сохранились'));
+  api.putDoc('imagegen', getState().imageSettings).catch((err) => toastError(err, t('Image settings were not saved')));
 }, 600);
 
 export function updateImageSettings(patch: Partial<ImageSettings>) {
@@ -299,7 +318,7 @@ export function updateImageSettings(patch: Partial<ImageSettings>) {
 const saveChatDebounced = debounce(() => {
   const chat = getState().chat;
   if (!chat) return;
-  api.putChat(chat).catch((err) => toastError(err, 'Чат не сохранился'));
+  api.putChat(chat).catch((err) => toastError(err, t('The chat was not saved')));
 }, 700);
 
 function saveChatNow() {
@@ -317,7 +336,7 @@ export function setChat(updater: (c: Chat) => Chat, save = true) {
 export function saveChatImmediately() {
   saveChatDebounced.cancel();
   const chat = getState().chat;
-  if (chat) return api.putChat(chat).catch((err) => toastError(err, 'Чат не сохранился'));
+  if (chat) return api.putChat(chat).catch((err) => toastError(err, t('The chat was not saved')));
 }
 
 window.addEventListener('beforeunload', () => {
@@ -337,31 +356,44 @@ export async function boot() {
     const data = await api.bootstrap();
     const c = data.collections;
     const settings = mergeSettings(data.docs.settings);
+    // The page was built in the language remembered by this browser; follow the profile.
+    if (syncLang(settings.language)) {
+      location.reload();
+      return;
+    }
+    const savedImages = { ...(data.docs.imagegen || {}) } as Partial<ImageSettings> & { scenePrompt?: string; portraitPrompt?: string };
+    migrateLegacyPrompt(settings.prompts, 'imageScene', savedImages.scenePrompt);
+    migrateLegacyPrompt(settings.prompts, 'imagePortrait', savedImages.portraitPrompt);
+    delete savedImages.scenePrompt;
+    delete savedImages.portraitPrompt;
+    const presets: Preset[] = c.presets || [];
+    const migratedPresets = presets.map(migratePreset);
     const state: Partial<AppState> = {
       version: data.version,
       profile: data.profile,
       profiles: data.profiles,
       isLocal: data.isLocal,
       settings,
-      imageSettings: { ...DEFAULT_IMAGE_SETTINGS, ...(data.docs.imagegen || {}) },
+      imageSettings: { ...DEFAULT_IMAGE_SETTINGS, ...savedImages },
       extensionsState: data.docs['extensions-state'] || {},
       secrets: data.secrets,
       extensions: data.extensions,
       characters: c.characters || [],
       personas: c.personas || [],
       worlds: c.worlds || [],
-      presets: c.presets || [],
-      instruct: [...BUILTIN_INSTRUCT, ...(c.instruct || []).filter((t: InstructTemplate) => !BUILTIN_INSTRUCT.some((b) => b.id === t.id))],
+      presets: migratedPresets,
+      instruct: [...BUILTIN_INSTRUCT, ...(c.instruct || []).filter((tpl: InstructTemplate) => !BUILTIN_INSTRUCT.some((b) => b.id === tpl.id))],
       regex: c.regex || [],
-      themes: [...BUILTIN_THEMES.filter((t) => !(c.themes || []).some((x: Theme) => x.id === t.id)), ...(c.themes || [])],
+      themes: [...BUILTIN_THEMES.filter((th) => !(c.themes || []).some((x: Theme) => x.id === th.id)), ...(c.themes || [])],
       connections: c.connections || [],
       plots: c.plots || [],
       groups: c.groups || [],
       quickreplies: c.quickreplies || [],
     };
     setState(state);
+    migratedPresets.forEach((p, i) => p !== presets[i] && upsert('presets', p));
     if (!settings.onboarded) await seedFirstRun();
-    if (!getState().presets.length) upsert('presets', newPreset({ id: 'sweet-romance', name: 'Сладкий роман v3' }));
+    if (!getState().presets.length) upsert('presets', newPreset({ id: 'sweet-romance', name: 'Sweet Romance v3' }));
     setState({ ready: true });
   } catch (err) {
     setState({ bootError: err instanceof Error ? err.message : String(err) });
@@ -403,7 +435,7 @@ export function activePersona(s: AppState = getState()): Persona | undefined {
 }
 
 export function activePreset(s: AppState = getState()): Preset {
-  return s.presets.find((p) => p.id === s.settings.activePresetId) || s.presets[0] || newPreset({ id: 'fallback', name: 'Пресет' });
+  return s.presets.find((p) => p.id === s.settings.activePresetId) || s.presets[0] || newPreset({ id: 'fallback', name: t('Preset') });
 }
 
 export function connectionFor(task: keyof Settings['profileFor'], s: AppState = getState()): ConnectionProfile | undefined {

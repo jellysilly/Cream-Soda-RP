@@ -48,6 +48,10 @@ function saveSettings() {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
 }
 
+let lang = 'en';
+/** Text for the launcher's own messages in the language of the current profile. */
+const tr = (en, ru) => (lang === 'ru' ? ru : en);
+
 let launcherWin = null;
 let appWin = null;
 let server = null;
@@ -67,7 +71,8 @@ async function lanInfo() {
 }
 
 async function state() {
-  const { listProfiles, VERSION } = await configModule();
+  const { listProfiles, profileLanguage, VERSION } = await configModule();
+  lang = profileLanguage(DATA, settings.profile);
   const profiles = listProfiles(DATA);
   if (!profiles.includes(settings.profile)) profiles.unshift(settings.profile);
   return {
@@ -83,6 +88,7 @@ async function state() {
     dataRoot: DATA,
     packaged: app.isPackaged,
     platform: process.platform,
+    lang,
   };
 }
 
@@ -107,7 +113,7 @@ async function startServer() {
       });
       return server;
     } catch (err) {
-      console.error('[launcher] сервер не запустился:', err);
+      console.error('[launcher] the server did not start:', err);
       lastError = err.message;
       throw err;
     } finally {
@@ -182,7 +188,7 @@ function createLauncher() {
     frame: false,
     transparent: process.platform !== 'linux',
     backgroundColor: process.platform === 'linux' ? '#F8C6D8' : '#00000000',
-    title: 'Cream Soda · лаунчер',
+    title: 'Cream Soda · launcher',
     icon: appIcon,
     show: false,
     webPreferences: {
@@ -252,7 +258,7 @@ ipcMain.handle('backup', async () => {
   const paths = resolvePaths(DATA, settings.profile);
   const stamp = new Date().toISOString().slice(0, 10);
   const res = await dialog.showSaveDialog(launcherWin, {
-    title: 'Сохранить бэкап',
+    title: tr('Save the backup', 'Сохранить бэкап'),
     defaultPath: path.join(app.getPath('documents'), `cream-soda-${paths.profile}-${stamp}.zip`),
     filters: [{ name: 'ZIP', extensions: ['zip'] }],
   });
@@ -264,12 +270,12 @@ ipcMain.handle('backup', async () => {
 });
 
 ipcMain.handle('logs', async () => {
-  if (server) return server.logs.tail(400).map((l) => `${new Date(l.time).toLocaleTimeString('ru-RU')} [${l.level}] ${l.text}`).join('\n');
+  if (server) return server.logs.tail(400).map((l) => `${new Date(l.time).toLocaleTimeString(lang === 'ru' ? 'ru-RU' : 'en-GB')} [${l.level}] ${l.text}`).join('\n');
   try {
     const text = await fsp.readFile(path.join(DATA, 'logs', 'server.log'), 'utf8');
     return text.split('\n').slice(-400).join('\n');
   } catch {
-    return 'Логов пока нет — сервер ещё не запускался.';
+    return tr('No logs yet: the server has not been started.', 'Логов пока нет — сервер ещё не запускался.');
   }
 });
 
@@ -287,16 +293,16 @@ function run(cmd, args, cwd) {
 ipcMain.handle('update', async () => {
   if (app.isPackaged || !fs.existsSync(path.join(ROOT, '.git'))) {
     await shell.openExternal(RELEASES_URL);
-    return { ok: true, message: 'Открыла страницу релизов — скачайте новую версию.' };
+    return { ok: true, message: tr('Opened the releases page: download the new version there.', 'Открыла страницу релизов — скачайте новую версию.') };
   }
   const pull = await run('git', ['pull', '--ff-only'], ROOT);
   if (pull.code !== 0) return { ok: false, message: pull.out.trim() };
-  if (/Already up to date|Уже актуально/i.test(pull.out)) return { ok: true, message: 'Уже последняя версия.' };
+  if (/Already up to date|Уже актуально/i.test(pull.out)) return { ok: true, message: tr('Already the latest version.', 'Уже последняя версия.') };
   const install = await run('npm', ['install', '--no-audit', '--no-fund'], ROOT);
   const build = install.code === 0 ? await run('npm', ['run', 'build'], ROOT) : install;
   return {
     ok: build.code === 0,
-    message: build.code === 0 ? 'Обновлено. Перезапустите лаунчер.' : build.out.trim().split('\n').slice(-8).join('\n'),
+    message: build.code === 0 ? tr('Updated. Restart the launcher.', 'Обновлено. Перезапустите лаунчер.') : build.out.trim().split('\n').slice(-8).join('\n'),
   };
 });
 

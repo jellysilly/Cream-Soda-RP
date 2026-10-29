@@ -4,7 +4,8 @@ import { Icon } from '../../components/Icon';
 import { Kana, Field } from '../../components/ui';
 import { summarizeChapter } from '../../lib/generate';
 import { chapterNumber, memoryTokens, pendingRange } from '../../lib/memory';
-import { fmtNum, plural } from '../../lib/utils';
+import { fmtNum } from '../../lib/utils';
+import { t, tn } from '../../lib/i18n';
 
 export function MemoryWidget() {
   const chat = useStore((s) => s.chat);
@@ -36,26 +37,26 @@ export function MemoryWidget() {
             navigate('memory');
           }}
         >
-          Открыть
+          {t('Open')}
         </a>
       </div>
       {last ? (
         <div className="cs-mem-card">
           <div className="cs-mem-card__label">
-            Глава {done.length} · «{last.title}»
+            {t('Chapter {n} · “{title}”', { n: done.length, title: last.title })}
           </div>
           <p>{last.summary}</p>
         </div>
       ) : (
         <div className="cs-mem-card">
-          <p className="cs-muted">Пока ни одной главы. Когда история разрастётся, сожми её в запись — модель будет помнить главное.</p>
+          <p className="cs-muted">{t('No chapters yet. Once the story grows, condense it into an entry: the model will remember the main points.')}</p>
         </div>
       )}
       {fact ? (
         <div className="cs-mem-card">
           <div className="cs-mem-card__label cs-mem-card__label--mint">
             <Icon name="pin" size={14} stroke={2.2} />
-            Закреплённый факт
+            {t('Pinned fact')}
           </div>
           <p>{fact.text}</p>
         </div>
@@ -63,10 +64,10 @@ export function MemoryWidget() {
       <div className="cs-col" style={{ gap: 6 }}>
         <div className="cs-row" style={{ justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: 'var(--cs-muted)' }}>
           <span>
-            Глава {n} · {pend.count} {plural(pend.count, 'сообщение', 'сообщения', 'сообщений')}
+            {t('Chapter {n} · {count} {x}', { n, count: pend.count, x: tn(pend.count, 'message|messages') })}
           </span>
           <span>
-            {fmtNum(used)} / {fmtNum(budget)} ток.
+            {t('{used} / {budget} tok.', { used: fmtNum(used), budget: fmtNum(budget) })}
           </span>
         </div>
         <div className="cs-progress">
@@ -80,7 +81,7 @@ export function MemoryWidget() {
         onClick={() => summarizeChapter().catch((e) => toastError(e, 'Memory Book'))}
       >
         {busy ? <span className="cs-spinner" /> : null}
-        Сжать главу {n} в запись
+        {t('Condense chapter {n} into an entry', { n })}
       </button>
     </section>
   );
@@ -96,7 +97,7 @@ export function LoreWidget() {
     <section className="cs-panel" style={{ gap: 10 }}>
       <div className="cs-panel-head">
         <h2 className="cs-h2" style={{ fontSize: 17 }}>
-          Активный лор
+          {t('Active lore')}
         </h2>
         <a
           href="#/library/lorebooks"
@@ -107,7 +108,7 @@ export function LoreWidget() {
             navigate('library', 'lorebooks');
           }}
         >
-          Лорбуки
+          {t('Lorebooks')}
         </a>
       </div>
       {lore.length ? (
@@ -123,7 +124,7 @@ export function LoreWidget() {
           </div>
         ))
       ) : (
-        <p className="cs-hint">{hasBooks ? 'Записи появятся здесь, когда ключевые слова встретятся в разговоре.' : 'К этому чату не привязан ни один лорбук.'}</p>
+        <p className="cs-hint">{hasBooks ? t('Entries show up here when their keywords come up in the conversation.') : t('No lorebook is attached to this chat.')}</p>
       )}
     </section>
   );
@@ -140,24 +141,24 @@ export function SceneWidget() {
     <section className="cs-panel">
       <div className="cs-panel-head">
         <h2 className="cs-h2" style={{ fontSize: 17 }}>
-          Кадр сцены
+          {t('Scene frame')}
         </h2>
-        <span className="cs-pill cs-ml-auto">{endpoint ? 'свой API' : 'не настроен'}</span>
+        <span className="cs-pill cs-ml-auto">{endpoint ? t('own API') : t('not set up')}</span>
       </div>
       <div className="cs-scene-frame">
         {scene ? (
-          <img src={scene} alt="Кадр сцены" />
+          <img src={scene} alt={t('Scene frame')} />
         ) : (
           <>
             <div className="cs-backdrop__orb cs-backdrop__orb--pink" style={{ position: 'absolute', left: 20, top: 18, width: 70, height: 70, filter: 'blur(2px)' }} />
             <div className="cs-backdrop__orb cs-backdrop__orb--blue" style={{ position: 'absolute', right: 26, bottom: 16, width: 60, height: 60, filter: 'blur(2px)' }} />
             <span className="cs-scene-frame__label">
-              [кадр сцены · {w}×{h}]
+              {t('[scene frame · {w}×{h}]', { w, h })}
             </span>
           </>
         )}
       </div>
-      <p className="cs-hint">Промпт для картинки собирается из последних {n} сообщений и внешности персонажа.</p>
+      <p className="cs-hint">{t("The image prompt is built from the last {n} messages and the character's appearance.", { n })}</p>
       <button
         type="button"
         className="cs-btn cs-btn--primary"
@@ -168,12 +169,12 @@ export function SceneWidget() {
             const { generateSceneFrame } = await import('../../lib/images');
             await generateSceneFrame({ insert: false });
           } catch (err) {
-            toastError(err, 'Кадр сцены');
+            toastError(err, t('Scene frame'));
           }
         }}
       >
         {busy ? <span className="cs-spinner" /> : null}
-        {endpoint ? 'Сгенерировать кадр' : 'Настроить свой API'}
+        {endpoint ? t('Generate a frame') : t('Set up your own API')}
       </button>
     </section>
   );
@@ -188,27 +189,27 @@ export function AuthorNoteWidget() {
     <section className="cs-panel" style={{ gap: 10 }}>
       <button type="button" className="cs-panel-head" style={{ border: 'none', background: 'none', padding: 0, color: 'inherit', textAlign: 'left' }} onClick={() => setOpen(!open)}>
         <h2 className="cs-h2" style={{ fontSize: 17 }}>
-          Заметка автора
+          {t("Author's note")}
         </h2>
         {an.text ? <span className="cs-dot cs-dot--sm" /> : null}
         <Icon name={open ? 'up' : 'down'} size={18} className="cs-ml-auto" />
       </button>
       {open ? (
         <>
-          <textarea className="cs-textarea" rows={3} placeholder="Например: сейчас идёт ливень; Рин немного ревнует." value={an.text} onChange={(e) => set({ text: e.target.value })} />
+          <textarea className="cs-textarea" rows={3} placeholder={t("For example: it's pouring outside; Rin is a little jealous.")} value={an.text} onChange={(e) => set({ text: e.target.value })} />
           <div className="cs-grid-fields cs-grid-fields--sm">
-            <Field label="Глубина">
+            <Field label={t('Depth')}>
               <input className="cs-input" type="number" min={0} value={an.depth} onChange={(e) => set({ depth: Math.max(0, Number(e.target.value)) })} />
             </Field>
-            <Field label="Каждые N">
+            <Field label={t('Every N')}>
               <input className="cs-input" type="number" min={0} value={an.interval} onChange={(e) => set({ interval: Math.max(0, Number(e.target.value)) })} />
             </Field>
           </div>
-          <Field label="Куда">
+          <Field label={t('Where')}>
             <select className="cs-select" value={an.position} onChange={(e) => set({ position: e.target.value as typeof an.position })}>
-              <option value="depth">В историю, на глубину</option>
-              <option value="after_main">После основного промпта</option>
-              <option value="before_main">Перед основным промптом</option>
+              <option value="depth">{t('Into the history, at depth')}</option>
+              <option value="after_main">{t('After the main prompt')}</option>
+              <option value="before_main">{t('Before the main prompt')}</option>
             </select>
           </Field>
         </>

@@ -29,7 +29,7 @@ export function askNode(eventName, replyEvent, arg, timeoutMs = 30000) {
     };
     const timer = setTimeout(() => {
       done();
-      reject(new Error('Node.js не ответил'));
+      reject(new Error('Node.js did not answer'));
     }, timeoutMs);
     Promise.resolve(
       NodeJS.addListener(replyEvent, (event) => {
@@ -48,7 +48,7 @@ export function askNode(eventName, replyEvent, arg, timeoutMs = 30000) {
 
 const NOTIFICATION_ID = 8000;
 
-export async function setBackground(enabled) {
+export async function setBackground(enabled, body) {
   if (!enabled) {
     await ForegroundService.stopForegroundService().catch(() => {});
     return true;
@@ -61,7 +61,7 @@ export async function setBackground(enabled) {
   await ForegroundService.startForegroundService({
     id: NOTIFICATION_ID,
     title: 'Cream Soda',
-    body: 'Сервер работает — чаты доступны',
+    body,
     smallIcon: 'ic_stat_soda',
     silent: true,
   });
@@ -99,14 +99,19 @@ export async function scanQr() {
 
 // ───────── Files and logs ─────────
 
+/** Language of the Java toasts («Saved: …»). Older APKs have no setLanguage. */
+export function setAndroidLanguage(lang) {
+  window.CreamSodaAndroid?.setLanguage?.(lang);
+}
+
 const LOG_TAGS = /^\S+ \S+ [VDIWEF]\/(NodeJS-Engine|CreamSoda\/Node|Capacitor[^(]*|AndroidRuntime|System\.err|DEBUG|libc|linker)\s*\(/;
 
-/** This app's Android log (Node.js output, plugin and crash messages), or '' outside the app. */
+/** This app's Android log (Node.js output, plugin and crash messages), or '' outside the app. Throws if Android refuses. */
 export function readSystemLog(maxLines = 400) {
   const bridge = window.CreamSodaAndroid;
   if (!bridge?.readLogs) return '';
   const raw = String(bridge.readLogs());
-  if (raw.startsWith('error:')) return `Не удалось прочитать журнал Android: ${raw.slice(6)}`;
+  if (raw.startsWith('error:')) throw new Error(raw.slice(6));
   const lines = raw.split('\n').filter((line) => LOG_TAGS.test(line));
   return lines.slice(-maxLines).join('\n');
 }
@@ -114,7 +119,7 @@ export function readSystemLog(maxLines = 400) {
 /** Saves text into Downloads/Cream Soda (MainActivity bridge) and returns where it went. */
 export function saveText(name, text) {
   const bridge = window.CreamSodaAndroid;
-  if (!bridge?.saveBase64) throw new Error('Сохранение файлов недоступно в этой сборке');
+  if (!bridge?.saveBase64) throw new Error('File saving is not available in this build');
   const bytes = new TextEncoder().encode(text);
   let binary = '';
   for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -126,7 +131,7 @@ export function saveText(name, text) {
 /** Copies a file from the app's private data into Downloads/Cream Soda (MainActivity bridge). */
 export function exportFile(path, name, mime) {
   const bridge = window.CreamSodaAndroid;
-  if (!bridge?.exportFile) throw new Error('Сохранение файлов недоступно в этой сборке');
+  if (!bridge?.exportFile) throw new Error('File saving is not available in this build');
   const res = String(bridge.exportFile(path, name, mime));
   if (res.startsWith('error:')) throw new Error(res.slice(6));
   return res;

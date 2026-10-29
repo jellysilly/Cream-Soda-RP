@@ -1,6 +1,7 @@
 import type { RegexPlacement, RegexScript } from './types';
 import { substituteMacros, type MacroEnv } from './macros';
 import { escapeRegex } from './utils';
+import { t } from './i18n';
 
 export const PLACEMENT = {
   USER_INPUT: 1 as RegexPlacement,
@@ -11,11 +12,11 @@ export const PLACEMENT = {
 };
 
 export const PLACEMENT_LABELS: Record<number, string> = {
-  1: 'Ввод игрока',
-  2: 'Ответы ИИ',
-  3: 'Слэш-команды',
-  5: 'Лорбук',
-  6: 'Мысли модели',
+  1: t('Player input'),
+  2: t('AI replies'),
+  3: t('Slash commands'),
+  5: t('Lorebook'),
+  6: t('Model reasoning'),
 };
 
 const regexCache = new Map<string, RegExp | null>();
@@ -54,9 +55,9 @@ export function regexError(input: string): string {
 
 function trimCaptured(value: string, trims: string[], env?: MacroEnv): string {
   let out = value ?? '';
-  for (const t of trims) {
-    if (!t) continue;
-    const needle = env ? substituteMacros(t, env) : t;
+  for (const trim of trims) {
+    if (!trim) continue;
+    const needle = env ? substituteMacros(trim, env) : trim;
     out = out.split(needle).join('');
   }
   return out;
@@ -96,9 +97,9 @@ export function runRegexScript(script: RegexScript, text: string, env?: MacroEnv
 
 export interface RegexRunOptions {
   placement: RegexPlacement;
-  /** Display pass: scripts marked «только отображение». */
+  /** Display pass: scripts marked «display only». */
   display?: boolean;
-  /** Prompt pass: scripts marked «только в промпт». */
+  /** Prompt pass: scripts marked «prompt only». */
   prompt?: boolean;
   /** Message depth from the end of the chat (0 = last). */
   depth?: number;

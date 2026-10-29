@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; script-src 'self'" />
-    <title>Cream Soda · лаунчер</title>
+    <title>Cream Soda · launcher</title>
     <link rel="stylesheet" href="./fonts/fonts.css" />
     <link rel="stylesheet" href="./launcher.css" />
   </head>
@@ -19,11 +19,11 @@
       <div class="blob" style="left: -80px; top: 340px"></div>
 
       <div class="titlebar">
-        <span class="titlebar__title">Cream Soda · лаунчер</span>
-        <button type="button" class="round-btn" id="btn-min" aria-label="Свернуть">
+        <span class="titlebar__title" data-i18n="Cream Soda · launcher">Cream Soda · launcher</span>
+        <button type="button" class="round-btn" id="btn-min" aria-label="Minimize" data-i18n-aria="Minimize">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12" /></svg>
         </button>
-        <button type="button" class="round-btn" id="btn-close" aria-label="Закрыть">
+        <button type="button" class="round-btn" id="btn-close" aria-label="Close" data-i18n-aria="Close">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17" /></svg>
         </button>
       </div>
@@ -33,8 +33,8 @@
           <div class="hero__kana" aria-hidden="true">クリーム<br />ソーダ</div>
           <div class="hero__script" aria-hidden="true"><span>cream</span><span>roleplay</span><span>soda</span></div>
           <h1>Cream Soda</h1>
-          <p class="hero__text">Всё нужное уже внутри: движок, сервер и интерфейс. Нажми «Запустить».</p>
-          <svg class="glass" viewBox="0 0 200 290" width="190" height="276" role="img" aria-label="Бокал крем-соды">
+          <p class="hero__text" data-i18n="Everything you need is already inside: the engine, the server and the interface. Press “Launch”.">Everything you need is already inside: the engine, the server and the interface. Press “Launch”.</p>
+          <svg class="glass" viewBox="0 0 200 290" width="190" height="276" role="img" aria-label="A glass of cream soda" data-i18n-aria="A glass of cream soda">
             <defs>
               <linearGradient id="soda" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DDF2FD" /><stop offset="1" stop-color="#86C6EC" /></linearGradient>
               <radialGradient id="scoop" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#FFFFFF" /><stop offset="0.6" stop-color="#FFF6E3" /><stop offset="1" stop-color="#F8E2C2" /></radialGradient>
@@ -55,43 +55,43 @@
 
         <div class="panel">
           <div class="row">
-            <span class="status" id="status"><span class="dot"></span><span id="status-text">Готово к запуску</span></span>
+            <span class="status" id="status"><span class="dot"></span><span id="status-text">Ready to launch</span></span>
             <span class="version" id="version">v…</span>
           </div>
 
           <button type="button" class="launch" id="btn-launch">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5z" /></svg>
-            <span id="launch-text">Запустить</span>
+            <span id="launch-text">Launch</span>
           </button>
 
-          <div class="segmented" role="radiogroup" aria-label="Где открыть">
-            <button type="button" role="radio" data-mode="window" aria-checked="true">В окне приложения</button>
-            <button type="button" role="radio" data-mode="browser" aria-checked="false">В браузере</button>
+          <div class="segmented" role="radiogroup" aria-label="Where to open" data-i18n-aria="Where to open">
+            <button type="button" role="radio" data-mode="window" aria-checked="true" data-i18n="In the app window">In the app window</button>
+            <button type="button" role="radio" data-mode="browser" aria-checked="false" data-i18n="In the browser">In the browser</button>
           </div>
 
           <div class="phone">
-            <div class="qr" id="qr" aria-label="QR-код для телефона"></div>
+            <div class="qr" id="qr" aria-label="QR code for the phone" data-i18n-aria="QR code for the phone"></div>
             <div class="phone__info">
               <label class="check">
-                <span>Открыть с телефона</span>
+                <span data-i18n="Open from a phone">Open from a phone</span>
                 <input type="checkbox" id="lan" />
               </label>
               <span class="mono" id="lan-addr">—</span>
-              <span class="hint" id="lan-hint">Отсканируй QR-код в той же Wi-Fi сети</span>
+              <span class="hint" id="lan-hint">Scan the QR code on the same Wi-Fi network</span>
             </div>
           </div>
 
           <label class="field">
-            <span>Профиль</span>
+            <span data-i18n="Profile">Profile</span>
             <select id="profile"></select>
           </label>
 
           <p class="hint error" id="error" hidden></p>
 
           <div class="bottom">
-            <button type="button" class="soft-btn" id="btn-update">Обновить</button>
-            <button type="button" class="soft-btn" id="btn-backup">Бэкап</button>
-            <button type="button" class="soft-btn" id="btn-logs">Логи</button>
+            <button type="button" class="soft-btn" id="btn-update" data-i18n="Update">Update</button>
+            <button type="button" class="soft-btn" id="btn-backup" data-i18n="Backup">Backup</button>
+            <button type="button" class="soft-btn" id="btn-logs" data-i18n="Logs">Logs</button>
           </div>
         </div>
       </div>
@@ -99,10 +99,10 @@
       <div class="overlay" id="logs" hidden>
         <div class="overlay__card">
           <div class="row">
-            <strong>Логи сервера</strong>
-            <button type="button" class="soft-btn soft-btn--sm" id="btn-logs-refresh">Обновить</button>
-            <button type="button" class="soft-btn soft-btn--sm" id="btn-data">Папка данных</button>
-            <button type="button" class="round-btn" id="btn-logs-close" aria-label="Закрыть">
+            <strong data-i18n="Server logs">Server logs</strong>
+            <button type="button" class="soft-btn soft-btn--sm" id="btn-logs-refresh" data-i18n="Refresh">Refresh</button>
+            <button type="button" class="soft-btn soft-btn--sm" id="btn-data" data-i18n="Data folder">Data folder</button>
+            <button type="button" class="round-btn" id="btn-logs-close" aria-label="Close" data-i18n-aria="Close">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17" /></svg>
             </button>
           </div>

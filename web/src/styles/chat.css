@@ -740,6 +740,18 @@
   padding: 0;
 }
 
+.cs-impersonate__tail {
+  flex: 1 1 260px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cs-impersonate__tail .cs-direction {
+  min-width: 0;
+}
+
 .cs-direction {
   flex: 1 1 220px;
   display: flex;
@@ -1229,6 +1241,10 @@
   .cs-impersonate .cs-choice,
   .cs-impersonate .cs-direction {
     display: none;
+  }
+
+  .cs-impersonate__tail {
+    flex: none;
   }
 
   .cs-imp-mode-mobile {

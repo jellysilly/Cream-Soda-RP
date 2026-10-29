@@ -1,13 +1,14 @@
+import { t } from './i18n';
 /** Minimal PNG text-chunk reader/writer used for character cards (chara / ccv3). */
 
 const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
+  const table = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {
     let c = n;
     for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
+    table[n] = c >>> 0;
   }
-  return t;
+  return table;
 })();
 
 function crc32(bytes: Uint8Array): number {
@@ -28,7 +29,7 @@ interface Chunk {
 }
 
 function readChunks(bytes: Uint8Array): Chunk[] {
-  if (!isPng(bytes)) throw new Error('Это не PNG-файл');
+  if (!isPng(bytes)) throw new Error(t('This is not a PNG file'));
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const chunks: Chunk[] = [];
   let off = 8;
@@ -151,7 +152,7 @@ export async function toPngBytes(src: Blob | string | null, size = 512): Promise
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const i = new Image();
         i.onload = () => resolve(i);
-        i.onerror = () => reject(new Error('Не удалось прочитать изображение'));
+        i.onerror = () => reject(new Error(t('Could not read the image')));
         i.src = url;
       });
       canvas.width = img.naturalWidth || size;

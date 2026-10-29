@@ -21,13 +21,13 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 
 if (args.help) {
-  console.log(`Cream Soda — сервер ролевых чатов
+  console.log(`Cream Soda — roleplay chat server
 
-  --port <n>        порт (по умолчанию 8000)
-  --lan             разрешить вход с телефона в той же Wi-Fi сети
-  --data <путь>     папка с данными (по умолчанию ./data)
-  --profile <имя>   профиль данных (по умолчанию default)
-  --open            открыть интерфейс в браузере
+  --port <n>        port (default 8000)
+  --lan             allow phones on the same Wi-Fi network to connect
+  --data <path>     data folder (default ./data)
+  --profile <name>  data profile (default "default")
+  --open            open the interface in the browser
 `);
   process.exit(0);
 }
@@ -40,7 +40,7 @@ const server = await startServer({
   strictPort: !!args['strict-port'],
 });
 
-if (args.lan) console.log(`[server] вход с телефона: http://<ip-компьютера>:${server.port}/?k=${server.lanToken}`);
+if (args.lan) console.log(`[server] open from a phone: http://<computer-ip>:${server.port}/?k=${server.lanToken}`);
 
 if (args.open) {
   const cmd = process.platform === 'win32' ? 'start ""' : process.platform === 'darwin' ? 'open' : 'xdg-open';

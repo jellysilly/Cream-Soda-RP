@@ -6,7 +6,7 @@
  * Changes for Cream Soda:
  *  - The engine state and the Node.js process are per process, not per plugin
  *    instance. Android recreates the activity (and the plugin) while the process
- *    lives on, e.g. after «Назад» on Android 11 and older, a font size change or
+ *    lives on, e.g. after «Back» on Android 11 and older, a font size change or
  *    memory pressure, and the foreground service keeps the process alive. The
  *    original then called node::Start a second time, which Node.js does not
  *    support: the app crashed or hung on startup. Now the new instance reuses the
@@ -19,7 +19,7 @@
  *    posts them to the WebView like any other plugin result, and a Java exception
  *    can't stay pending on the Node.js thread and break later messages.
  *  - Startup steps, messages and the exit of Node.js go to the Android log
- *    (tag CreamSoda/Node, readable from the launcher's «Логи»), and an exit of
+ *    (tag CreamSoda/Node, readable from the launcher's «Logs»), and an exit of
  *    Node.js reaches the launcher as a «status» event with the exit code.
  */
 package net.hampoelz.capacitor.nodejs;
@@ -157,7 +157,7 @@ public class CapacitorNodeJS {
 
             final boolean copyNodeProjectSuccess = copyNodeProjectFromAPK(projectDir, projectPath, modulesPath);
             if (!copyNodeProjectSuccess) {
-                Log.e(LOG_TAG, "Не удалось скопировать Node-проект из APK в " + projectPath);
+                Log.e(LOG_TAG, "Could not copy the Node project from the APK to " + projectPath);
                 callWrapper.reject("Unable to copy the Node.js project from APK.");
                 return;
             }
@@ -206,9 +206,9 @@ public class CapacitorNodeJS {
             nodeEnv.put("NODE_PATH", modulesPaths);
             nodeEnv.putAll(env);
 
-            Log.i(LOG_TAG, "Запускаю Node.js: " + projectMainPath);
+            Log.i(LOG_TAG, "Starting Node.js: " + projectMainPath);
             final int exitCode = nodeProcess.start(projectMainPath, args, nodeEnv, cachePath);
-            Log.e(LOG_TAG, "Node.js завершился, код " + exitCode);
+            Log.e(LOG_TAG, "Node.js exited, code " + exitCode);
             notifyEngineExit(exitCode);
             callWrapper.resolve();
         });
@@ -228,12 +228,12 @@ public class CapacitorNodeJS {
             final JSObject status = new JSObject();
             status.put("stage", "error");
             status.put("fatal", true);
-            status.put("error", "Node.js завершился (код " + exitCode + ")");
+            status.put("error", "Node.js exited (code " + exitCode + ")");
             final JSArray args = new JSArray();
             args.put(status);
             target.eventNotifier.channelReceive("status", args);
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Не удалось сообщить лаунчеру о завершении Node.js", e);
+            Log.e(LOG_TAG, "Could not tell the launcher that Node.js exited", e);
         }
     }
 
@@ -291,7 +291,7 @@ public class CapacitorNodeJS {
                 try {
                     target.receiveMessage(channelName, message);
                 } catch (Exception e) {
-                    Log.e(LOG_TAG, "Ошибка при обработке сообщения от Node.js", e);
+                    Log.e(LOG_TAG, "Error while handling a message from Node.js", e);
                 }
             });
         }
@@ -309,7 +309,7 @@ public class CapacitorNodeJS {
                 args = new JSArray(eventMessage);
             }
 
-            Log.i(LOG_TAG, "← Node.js: " + channelName + " " + eventName + " (" + channelMessage.length() + " байт)");
+            Log.i(LOG_TAG, "← Node.js: " + channelName + " " + eventName + " (" + channelMessage.length() + " bytes)");
             if (Objects.equals(channelName, CapacitorNodeJSPlugin.CHANNEL_NAME_APP) && Objects.equals(eventName, "ready")) {
                 engineStatus.setReady();
             } else if (Objects.equals(channelName, CapacitorNodeJSPlugin.CHANNEL_NAME_EVENT)) {
@@ -328,10 +328,10 @@ public class CapacitorNodeJS {
         final boolean updated = isAppUpdated();
         if (!updated && FileOperations.ExistsPath(projectPath) && FileOperations.ExistsPath(modulesPath)) {
             // Same APK as last time and the copy finished then: reuse it.
-            Log.i(LOG_TAG, "Node-проект уже распакован: " + projectPath);
+            Log.i(LOG_TAG, "Node project already unpacked: " + projectPath);
             return true;
         }
-        Log.i(LOG_TAG, "Распаковываю Node-проект из APK в " + projectPath);
+        Log.i(LOG_TAG, "Unpacking the Node project from the APK to " + projectPath);
 
         boolean success = true;
         if (FileOperations.ExistsPath(projectPath)) {
@@ -347,7 +347,7 @@ public class CapacitorNodeJS {
         if (success) {
             saveAppUpdateTime();
         }
-        Log.i(LOG_TAG, "Распаковка " + (success ? "завершена" : "не удалась"));
+        Log.i(LOG_TAG, "Unpacking " + (success ? "finished" : "failed"));
         return success;
     }
 

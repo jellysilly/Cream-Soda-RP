@@ -39,7 +39,7 @@ export class Secrets {
       const plain = Buffer.concat([decipher.update(Buffer.from(raw.data, 'base64')), decipher.final()]);
       this.cache = JSON.parse(plain.toString('utf8'));
     } catch {
-      console.warn('[secrets] не удалось расшифровать ключи — возможно, данные перенесены с другого устройства');
+      console.warn('[secrets] could not decrypt the keys: the data may have been moved from another device');
       this.cache = {};
     }
     return this.cache;

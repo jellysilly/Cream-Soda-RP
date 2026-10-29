@@ -4,6 +4,7 @@ import { Message } from './Message';
 import { displayRegexScripts } from '../../lib/generate';
 import type { MacroEnv } from '../../lib/macros';
 import { chapterRange, chapterNumber, pendingRange } from '../../lib/memory';
+import { t } from '../../lib/i18n';
 
 export function MessageList({ highlight }: { highlight?: string }) {
   const chat = useStore((s) => s.chat);
@@ -15,8 +16,8 @@ export function MessageList({ highlight }: { highlight?: string }) {
   const gen = useStore((s) => s.gen);
   const persona = useStore((s) => s.personas.find((p) => p.id === (s.chat?.meta.personaId || s.settings.activePersonaId)) || s.personas[0]);
   const themeId = useStore(currentThemeId);
-  const dark = useStore((s) => !!s.themes.find((t) => t.id === themeId)?.dark);
-  const chatView = useStore((s) => s.themes.find((t) => t.id === themeId)?.chatView || 'bubbles');
+  const dark = useStore((s) => !!s.themes.find((th) => th.id === themeId)?.dark);
+  const chatView = useStore((s) => s.themes.find((th) => th.id === themeId)?.chatView || 'bubbles');
   const [limit, setLimit] = useState(chatSettings.renderLimit || 80);
   const box = useRef<HTMLElement>(null);
   const stick = useRef(true);
@@ -24,7 +25,7 @@ export function MessageList({ highlight }: { highlight?: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const scripts = useMemo(() => displayRegexScripts(), [regex, chat?.ownerId, presetId]);
   const owner = chat?.ownerType === 'character' ? characters.find((c) => c.id === chat.ownerId) : undefined;
-  const env: MacroEnv = useMemo(() => ({ user: persona?.name || 'Ты', char: owner?.name || '' }), [persona?.name, owner?.name]);
+  const env: MacroEnv = useMemo(() => ({ user: persona?.name || t('You'), char: owner?.name || '' }), [persona?.name, owner?.name]);
 
   useEffect(() => setLimit(chatSettings.renderLimit || 80), [chat?.id, chatSettings.renderLimit]);
 
@@ -56,10 +57,10 @@ export function MessageList({ highlight }: { highlight?: string }) {
     .filter((c) => c.status === 'memory')
     .forEach((c, i) => {
       const r = chapterRange(chat, c);
-      if (r) dividers.set(r[0], `глава ${i + 1} · «${c.title}»`);
+      if (r) dividers.set(r[0], t('chapter {i} · “{title}”', { i: i + 1, title: c.title }));
     });
   const pend = pendingRange(chat);
-  if (pend.count > 0 && !dividers.has(pend.start)) dividers.set(pend.start, `cream · soda · глава ${chapterNumber(chat.meta.memory)}`);
+  if (pend.count > 0 && !dividers.has(pend.start)) dividers.set(pend.start, t('cream · soda · chapter {x}', { x: chapterNumber(chat.meta.memory) }));
   if (dark) for (const [k, v] of dividers) dividers.set(k, v.replace('cream · soda', 'midnight · soda'));
 
   const speaker = (charId?: string) => (charId ? characters.find((c) => c.id === charId) : owner);
@@ -67,7 +68,7 @@ export function MessageList({ highlight }: { highlight?: string }) {
   const vnImage = vnChar?.sprites?.neutral || vnChar?.avatar;
 
   return (
-    <section className="cs-messages cs-chat-log" aria-label="Сообщения" ref={box} onScroll={onScroll}>
+    <section className="cs-messages cs-chat-log" aria-label={t('Messages')} ref={box} onScroll={onScroll}>
       {vnImage ? (
         <div className="cs-vn-stage" aria-hidden="true">
           <img src={vnImage} alt="" />
@@ -75,7 +76,7 @@ export function MessageList({ highlight }: { highlight?: string }) {
       ) : null}
       {start > 0 ? (
         <button type="button" className="cs-btn cs-btn--sm cs-btn--ghost cs-load-earlier" onClick={() => setLimit((l) => l + 80)}>
-          Показать ранние сообщения · {start}
+          {t('Show earlier messages · {start}', { start })}
         </button>
       ) : null}
       {messages.slice(start).map((m, j) => {
@@ -108,6 +109,7 @@ export function MessageList({ highlight }: { highlight?: string }) {
               markdown={chatSettings.renderMarkdown}
               html={chatSettings.renderHtml}
               htmlIframe={chatSettings.htmlIframe}
+              allowScripts={chatSettings.allowScripts}
               collapseReasoning={chatSettings.collapseReasoning}
               dark={dark}
             />

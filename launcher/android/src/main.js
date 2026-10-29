@@ -1,7 +1,119 @@
-import { engineReady, sendToNode, onNode, askNode, setBackground, setKeepAwake, scanQr, exportFile, readSystemLog, saveText } from './native.js';
+import { engineReady, sendToNode, onNode, askNode, setBackground, setKeepAwake, scanQr, exportFile, readSystemLog, saveText, setAndroidLanguage } from './native.js';
 
 const RELEASES_URL = 'https://github.com/jellysilly/Cream-Soda-RP/releases';
 const $ = (id) => document.getElementById(id);
+
+// ───────── Language ─────────
+// The screen follows the language chosen in the app (Settings → General), which
+// Node.js reports with every status; until then, the last one seen (English at first).
+
+const RU = {
+  'Server on the phone': 'Сервер на телефоне',
+  Startup: 'Запуск',
+  'Run in the background': 'Работать в фоне',
+  'Keep the screen on': 'Не давать экрану гаснуть',
+  'Connect to a PC': 'Подключиться к ПК',
+  'Scan the QR code from the launcher on the computer': 'Сканировать QR из лаунчера на компьютере',
+  Updates: 'Обновления',
+  Backup: 'Бэкап',
+  Logs: 'Логи',
+  'Server logs': 'Логи сервера',
+  Refresh: 'Обновить',
+  Save: 'Сохранить',
+  Close: 'Закрыть',
+  'Computer address': 'Адрес компьютера',
+  'The QR scanner is not available. Enter the address from the launcher on the PC: it is under the QR code, e.g. 192.168.1.12:8000.':
+    'Сканер QR недоступен. Введите адрес из лаунчера на ПК — он под QR-кодом, например 192.168.1.12:8000.',
+  Cancel: 'Отмена',
+  Connect: 'Подключиться',
+  'Close the app completely (swipe it away from the recent apps) and open it again. Details are in “Logs” at the bottom of the screen.':
+    'Закройте приложение полностью (смахните из списка недавних) и откройте снова. Подробности — в «Логи» внизу экрана.',
+  'The engine did not start': 'Движок не запустился',
+  'Engine unpacked': 'Движок распакован',
+  'Unpacking the engine…': 'Распаковываю движок…',
+  'Server start': 'Запуск сервера',
+  'Server started': 'Сервер запущен',
+  'The server did not start': 'Сервер не запустился',
+  'Starting the server…': 'Запускаю сервер…',
+  'Opening the interface…': 'Открываю интерфейс…',
+  'Interface ready': 'Интерфейс готов',
+  'Open the interface': 'Открыть интерфейс',
+  'Error: {error}': 'Ошибка: {error}',
+  'Try again': 'Попробовать снова',
+  Open: 'Открыть',
+  'The server did not start within a minute. {hint}': 'Сервер не запустился за минуту. {hint}',
+  'Node.js did not start within a minute and a half. The phone may be out of storage. {hint}': 'Node.js не запустился за полторы минуты. Возможно, не хватило места в памяти телефона. {hint}',
+  'Node.js started but is not answering. {hint}': 'Node.js запущен, но не отвечает. {hint}',
+  'Node.js exited (code {code})': 'Node.js завершился (код {code})',
+  'Without the notification permission Android may stop the server in the background': 'Без разрешения на уведомления Android может остановить сервер в фоне',
+  'Background mode: {error}': 'Фоновый режим: {error}',
+  'This does not look like a Cream Soda address from a computer': 'Это не похоже на адрес Cream Soda с компьютера',
+  'Connecting to the computer…': 'Подключаюсь к компьютеру…',
+  'The QR scanner is still downloading from Google Play. You can enter the address by hand for now.': 'Сканер QR ещё загружается из Google Play. Пока можно ввести адрес вручную.',
+  'Wait for the server to start first': 'Сначала дождитесь запуска сервера',
+  'Making a backup…': 'Собираю бэкап…',
+  'Backup failed: {error}': 'Бэкап не получился: {error}',
+  'unknown error': 'неизвестная ошибка',
+  'Backup saved:\n{where}': 'Бэкап сохранён:\n{where}',
+  'The backup was created in the app data ({name}) but not copied to Downloads: {error}': 'Бэкап создан в данных приложения ({name}), но не скопирован в Загрузки: {error}',
+  '── Server ──': '── Сервер ──',
+  Empty: 'Пусто',
+  'Collecting…': 'Собираю…',
+  'Log saved:\n{where}': 'Лог сохранён:\n{where}',
+  'The server is not running yet.': 'Сервер ещё не запущен.',
+  'The server is not running yet': 'Сервер ещё не запущен',
+  'Node.js did not answer': 'Node.js не ответил',
+  'File saving is not available in this build': 'Сохранение файлов недоступно в этой сборке',
+  'Could not read the Android log: {error}': 'Не удалось прочитать журнал Android: {error}',
+  'The server is running: chats are available': 'Сервер работает — чаты доступны',
+};
+const LANG_KEY = 'cs-android-lang';
+let lang = (() => {
+  try {
+    return localStorage.getItem(LANG_KEY) === 'ru' ? 'ru' : 'en';
+  } catch {
+    return 'en';
+  }
+})();
+const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m));
+const T = (en, vars = {}) => fill(lang === 'ru' ? RU[en] ?? en : en, vars);
+
+/** Messages from Node.js and Java come in English: translate the known ones, patterns included. */
+function translateMessage(message) {
+  if (lang !== 'ru' || !message) return message;
+  if (RU[message]) return RU[message];
+  for (const [en, ru] of Object.entries(RU)) {
+    if (!en.includes('{')) continue;
+    const names = [];
+    const source = en
+      .split(/(\{\w+\})/)
+      .map((part) => {
+        const m = /^\{(\w+)\}$/.exec(part);
+        if (!m) return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        names.push(m[1]);
+        return '([\\s\\S]+?)';
+      })
+      .join('');
+    const m = new RegExp(`^${source}$`).exec(message);
+    if (m) return fill(ru, Object.fromEntries(names.map((name, i) => [name, m[i + 1]])));
+  }
+  return message;
+}
+
+function applyLang(next) {
+  const target = next === 'ru' ? 'ru' : 'en';
+  try {
+    localStorage.setItem(LANG_KEY, target);
+  } catch {
+    /* no storage: the screen follows Node.js each time */
+  }
+  setAndroidLanguage(target);
+  if (target === lang && document.documentElement.lang === target) return;
+  lang = target;
+  document.documentElement.lang = lang;
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = T(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', T(el.dataset.i18nAria));
+}
 
 // ───────── Preferences (per device) ─────────
 
@@ -22,7 +134,7 @@ function savePrefs() {
   }
 }
 
-// Coming back from the interface (Android «Назад») must not bounce straight into it again.
+// Coming back from the interface (Android «Back») must not bounce straight into it again.
 const OPENED_KEY = 'cs-opened';
 const alreadyOpened = () => {
   try {
@@ -39,7 +151,7 @@ const ENGINE_TIMEOUT = 90000;
 // A running engine answers «hello» at once and starts the server within seconds.
 const REPLY_TIMEOUT = 15000;
 const START_TIMEOUT = 60000;
-const RESTART_HINT = 'Закройте приложение полностью (смахните из списка недавних) и откройте снова. Подробности — в «Логи» внизу экрана.';
+const RESTART_HINT = () => T('Close the app completely (swipe it away from the recent apps) and open it again. Details are in “Logs” at the bottom of the screen.');
 
 let engine = 'active'; // active | done | error
 let server = { stage: 'booting' };
@@ -63,30 +175,30 @@ function setStep(id, state, label) {
 function render() {
   if (server.version) $('version').textContent = `v${server.version}`;
 
-  if (engine === 'error') setStep('step-engine', 'error', 'Движок не запустился');
-  else setStep('step-engine', engine === 'done' ? 'done' : 'active', engine === 'done' ? 'Движок распакован' : 'Распаковываю движок…');
+  if (engine === 'error') setStep('step-engine', 'error', T('The engine did not start'));
+  else setStep('step-engine', engine === 'done' ? 'done' : 'active', engine === 'done' ? T('Engine unpacked') : T('Unpacking the engine…'));
 
   const ready = server.stage === 'ready';
-  if (engine !== 'done') setStep('step-server', 'idle', 'Запуск сервера');
-  else if (ready) setStep('step-server', 'done', 'Сервер запущен');
-  else if (server.stage === 'error') setStep('step-server', 'error', 'Сервер не запустился');
-  else setStep('step-server', 'active', 'Запускаю сервер…');
+  if (engine !== 'done') setStep('step-server', 'idle', T('Server start'));
+  else if (ready) setStep('step-server', 'done', T('Server started'));
+  else if (server.stage === 'error') setStep('step-server', 'error', T('The server did not start'));
+  else setStep('step-server', 'active', T('Starting the server…'));
 
-  if (opening) setStep('step-ui', 'active', 'Открываю интерфейс…');
-  else if (ready) setStep('step-ui', 'done', 'Интерфейс готов');
-  else setStep('step-ui', 'idle', 'Открыть интерфейс');
+  if (opening) setStep('step-ui', 'active', T('Opening the interface…'));
+  else if (ready) setStep('step-ui', 'done', T('Interface ready'));
+  else setStep('step-ui', 'idle', T('Open the interface'));
 
   const progress = engine !== 'done' ? 18 : !ready ? (server.stage === 'error' ? 50 : 55) : opening ? 82 : 100;
   $('progress').style.width = `${progress}%`;
   $('progress').parentElement.setAttribute('aria-valuenow', String(progress));
 
   $('error').hidden = !server.error;
-  $('error').textContent = server.error ? `Ошибка: ${server.error}` : '';
+  $('error').textContent = server.error ? T('Error: {error}', { error: translateMessage(server.error) }) : '';
 
-  // Without a live engine «Попробовать снова» can't help: only an app restart can.
+  // Without a live engine «Try again» can't help: only an app restart can.
   const retry = server.stage === 'error' && !server.fatal;
   $('btn-open').disabled = !ready && !retry;
-  $('open-text').textContent = retry ? 'Попробовать снова' : 'Открыть';
+  $('open-text').textContent = retry ? T('Try again') : T('Open');
 }
 
 function openInterface() {
@@ -98,7 +210,7 @@ function openInterface() {
   } catch {
     /* ignore */
   }
-  // Same WebView: Android «Назад» from the interface returns here.
+  // Same WebView: Android «Back» from the interface returns here.
   setTimeout(() => location.assign(`${server.url}/`), 450);
 }
 
@@ -119,13 +231,14 @@ function expectStatus(ms, message) {
 function startServer() {
   server = { ...server, stage: 'starting', error: '' };
   render();
-  expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
+  expectStatus(START_TIMEOUT, T('The server did not start within a minute. {hint}', { hint: RESTART_HINT() }));
   sendToNode('start', { port: 8000 }).catch((err) => fail(err.message || String(err)));
   watchStatus();
 }
 
 function onStatus(s) {
   if (!s) return;
+  if (s.lang) applyLang(s.lang);
   const was = server.stage;
   // A late «idle» (the answer to a «hello» sent before «start») changes nothing.
   if (s.stage === 'idle' && was === 'starting') return;
@@ -133,7 +246,7 @@ function onStatus(s) {
   if (!(s.stage === 'starting' && was === 'starting')) clearTimeout(watchdog);
   server = s;
   if (s.stage === 'idle') startServer();
-  else if (s.stage === 'starting' && was !== 'starting') expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
+  else if (s.stage === 'starting' && was !== 'starting') expectStatus(START_TIMEOUT, T('The server did not start within a minute. {hint}', { hint: RESTART_HINT() }));
   render();
   if (server.stage === 'ready' && was !== 'ready') {
     if (prefs.background) applyBackground(true);
@@ -170,6 +283,7 @@ async function watchStatus() {
 }
 
 async function boot() {
+  applyLang(lang);
   render();
   if (document.readyState !== 'complete') await new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
   await listenStatus();
@@ -181,14 +295,14 @@ async function boot() {
     await Promise.race([engineReady(), timeout]);
   } catch {
     engine = 'error';
-    return fail(`Node.js не запустился за полторы минуты. Возможно, не хватило места в памяти телефона. ${RESTART_HINT}`, true);
+    return fail(T('Node.js did not start within a minute and a half. The phone may be out of storage. {hint}', { hint: RESTART_HINT() }), true);
   } finally {
     clearTimeout(timer);
   }
   engine = 'done';
   render();
   // Silence after «hello» means the Node.js script itself failed to load.
-  expectStatus(REPLY_TIMEOUT, `Node.js запущен, но не отвечает. ${RESTART_HINT}`);
+  expectStatus(REPLY_TIMEOUT, T('Node.js started but is not answering. {hint}', { hint: RESTART_HINT() }));
   watchStatus();
 }
 
@@ -201,14 +315,14 @@ $('btn-open').addEventListener('click', () => {
 
 async function applyBackground(on) {
   try {
-    const ok = await setBackground(on);
+    const ok = await setBackground(on, T('The server is running: chats are available'));
     if (!ok) {
-      toast('Без разрешения на уведомления Android может остановить сервер в фоне');
+      toast(T('Without the notification permission Android may stop the server in the background'));
       $('background').checked = prefs.background = false;
       savePrefs();
     }
   } catch (err) {
-    toast(`Фоновый режим: ${err.message || err}`);
+    toast(T('Background mode: {error}', { error: err.message || err }));
   }
 }
 
@@ -242,8 +356,8 @@ function pcUrl(text) {
 
 function connectTo(text) {
   const url = pcUrl(text);
-  if (!url) return toast('Это не похоже на адрес Cream Soda с компьютера');
-  toast('Подключаюсь к компьютеру…');
+  if (!url) return toast(T('This does not look like a Cream Soda address from a computer'));
+  toast(T('Connecting to the computer…'));
   location.assign(url);
 }
 
@@ -252,7 +366,7 @@ $('btn-pc').addEventListener('click', async () => {
     const text = await scanQr();
     if (text) connectTo(text);
   } catch (err) {
-    if (err.code === 'unavailable') toast('Сканер QR ещё загружается из Google Play. Пока можно ввести адрес вручную.', 6000);
+    if (err.code === 'unavailable') toast(T('The QR scanner is still downloading from Google Play. You can enter the address by hand for now.'), 6000);
     $('manual').hidden = false;
     $('manual-addr').focus();
   }
@@ -271,16 +385,16 @@ $('btn-updates').addEventListener('click', () => {
 });
 
 $('btn-backup').addEventListener('click', async () => {
-  if (server.stage !== 'ready') return toast('Сначала дождитесь запуска сервера');
-  toast('Собираю бэкап…', 30000);
+  if (server.stage !== 'ready') return toast(T('Wait for the server to start first'));
+  toast(T('Making a backup…'), 30000);
   // Big galleries take a while to zip.
   const res = await askNode('backup', 'backup', undefined, 5 * 60000).catch((err) => ({ ok: false, error: err.message }));
-  if (!res?.ok) return toast(`Бэкап не получился: ${res?.error || 'неизвестная ошибка'}`, 6000);
+  if (!res?.ok) return toast(T('Backup failed: {error}', { error: translateMessage(res?.error) || T('unknown error') }), 6000);
   try {
     const where = exportFile(res.path, `cream-soda-${res.name}`, 'application/zip');
-    toast(`Бэкап сохранён:\n${where}`, 6000);
+    toast(T('Backup saved:\n{where}', { where }), 6000);
   } catch (err) {
-    toast(`Бэкап создан в данных приложения (${res.name}), но не скопирован в Загрузки: ${err.message}`, 8000);
+    toast(T('The backup was created in the app data ({name}) but not copied to Downloads: {error}', { name: res.name, error: err.message }), 8000);
   }
 });
 
@@ -289,16 +403,21 @@ async function collectLogs() {
   const parts = [];
   if (engine === 'done') {
     const serverLog = await askNode('logs', 'logs', undefined, 3000).catch(() => '');
-    if (serverLog) parts.push(`── Сервер ──\n${serverLog}`);
+    if (serverLog) parts.push(`${T('── Server ──')}\n${T(serverLog)}`);
   }
-  const system = readSystemLog();
+  let system = '';
+  try {
+    system = readSystemLog();
+  } catch (err) {
+    system = T('Could not read the Android log: {error}', { error: err.message });
+  }
   if (system) parts.push(`── Android ──\n${system}`);
-  return parts.join('\n\n') || 'Пусто';
+  return parts.join('\n\n') || T('Empty');
 }
 
 async function showLogs() {
   const pre = $('logs-text');
-  pre.textContent = 'Собираю…';
+  pre.textContent = T('Collecting…');
   pre.textContent = await collectLogs();
   pre.scrollTop = pre.scrollHeight;
 }
@@ -311,7 +430,7 @@ $('btn-logs-save').addEventListener('click', () => {
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   try {
     const where = saveText(`cream-soda-log-${stamp}.txt`, $('logs-text').textContent);
-    toast(`Лог сохранён:\n${where}`, 6000);
+    toast(T('Log saved:\n{where}', { where }), 6000);
   } catch (err) {
     toast(err.message || String(err), 6000);
   }

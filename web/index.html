@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#F5AEC8" />
-    <meta name="description" content="Cream Soda — ролевые чаты с ИИ" />
+    <meta name="description" content="Cream Soda — roleplay chats with AI" />
     <link rel="icon" type="image/svg+xml" href="./cream-soda-icon.svg" />
     <link rel="apple-touch-icon" href="./icon-192.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
@@ -14,9 +14,17 @@
     <div id="root">
       <div class="cs-boot" role="status" aria-live="polite">
         <img src="./cream-soda-icon-animated.svg" width="120" height="120" alt="" />
-        <span>Наливаю крем-соду…</span>
+        <span id="cs-boot-text">Pouring the cream soda…</span>
       </div>
     </div>
+    <script>
+      try {
+        if (localStorage.getItem('cs-lang') === 'ru') {
+          document.documentElement.lang = 'ru';
+          document.getElementById('cs-boot-text').textContent = 'Наливаю крем-соду…';
+        }
+      } catch (e) {}
+    </script>
     <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>

@@ -4,19 +4,20 @@
  * state to the launcher screen over the built-in `bridge` channel.
  *
  * Messages from the launcher: hello, start {port}, logs, backup.
- * Messages to the launcher:   status {stage, version, url, port, error}, logs <text>, backup {ok, path, name, error}.
+ * Messages to the launcher:   status {stage, version, url, port, error, lang}, logs <text>, backup {ok, path, name, error}.
  */
 // stdout/stderr of Node.js go to the Android log (tag NodeJS-Engine), which the
-// launcher's «Логи» can show even when this script is not answering.
+// launcher's «Logs» can show even when this script is not answering.
 const trace = (...args) => console.error('[android]', ...args);
 trace(`main.cjs: Node.js ${process.version}, ${process.platform}/${process.arch}`);
 
+const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { channel, getDataPath } = require('bridge');
-trace('bridge загружен');
+trace('bridge loaded');
 
-process.on('exit', (code) => trace('Node.js завершается, код', code));
+process.on('exit', (code) => trace('Node.js is exiting, code', code));
 
 // Messages cross JNI as "modified UTF-8", which has no 4-byte sequences: drop emoji and co.
 const jniSafe = (text) => String(text).replace(/[\u{10000}-\u{10FFFF}]/gu, '?');
@@ -27,13 +28,25 @@ const load = (rel) => import(pathToFileURL(path.join(here, rel)).href);
 
 let server = null;
 let starting = null;
+
+/** Interface language chosen in the app (Settings → General): the launcher screen follows it. */
+function language() {
+  try {
+    const settings = JSON.parse(fs.readFileSync(path.join(DATA, 'profiles', 'default', 'settings.json'), 'utf8'));
+    if (settings?.language === 'ru' || settings?.language === 'en') return settings.language;
+    // Saved before languages existed, by the Russian-only interface (same rule as the web app).
+    return settings && Object.keys(settings).length ? 'ru' : 'en';
+  } catch {
+    return 'en';
+  }
+}
 let status = { stage: 'booting', version: require('./package.json').version };
 
 function report(patch) {
   status = { ...status, ...patch };
   if (status.error) status.error = jniSafe(status.error);
   trace('status →', status.stage, status.error || '');
-  channel.send('status', status);
+  channel.send('status', { ...status, lang: language() });
 }
 
 async function start({ port = 8000 } = {}) {
@@ -46,7 +59,7 @@ async function start({ port = 8000 } = {}) {
     report({ stage: 'ready', url: server.url, port: server.port });
   })()
     .catch((err) => {
-      console.error('[android] сервер не запустился:', err);
+      console.error('[android] the server did not start:', err);
       report({ stage: 'error', error: err.message });
     })
     .finally(() => {
@@ -56,7 +69,7 @@ async function start({ port = 8000 } = {}) {
 
 channel.addListener('hello', () => {
   trace('hello ←');
-  channel.send('status', status);
+  channel.send('status', { ...status, lang: language() });
 });
 channel.addListener('start', (opts) => {
   trace('start ←', JSON.stringify(opts));
@@ -69,13 +82,13 @@ channel.addListener('logs', () => {
         .tail(300)
         .map((l) => `${new Date(l.time).toISOString().slice(11, 19)} [${l.level}] ${jniSafe(l.text)}`)
         .join('\n')
-    : status.error || 'Сервер ещё не запущен.';
+    : status.error || 'The server is not running yet.';
   channel.send('logs', text);
 });
 
 channel.addListener('backup', async () => {
   try {
-    if (!server) throw new Error('Сервер ещё не запущен');
+    if (!server) throw new Error('The server is not running yet');
     const { createBackup, saveBackupFile } = await load('server/src/backup.js');
     const { Secrets } = await load('server/src/secrets.js');
     const buf = await createBackup(server.paths, new Secrets(server.paths), { includeKeys: false });
@@ -87,7 +100,7 @@ channel.addListener('backup', async () => {
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('[android] необработанная ошибка:', err);
+  console.error('[android] unhandled error:', err);
   report({ stage: server ? 'ready' : 'error', error: err.message });
 });
 

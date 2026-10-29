@@ -3,7 +3,7 @@ import { escapeHtml } from './utils';
 
 /**
  * Message formatter: a small Markdown dialect tuned for roleplay
- * (*действия* курсивом, «реплики», **жирный**, `код`, ```блоки```, списки, цитаты)
+ * (*actions* in italics, “speech”, **bold**, `code`, ```blocks```, lists, quotes)
  * plus sanitised HTML coming from the model or from regex scripts.
  */
 
@@ -79,16 +79,48 @@ function renderParagraph(text: string): string {
 export interface FormatOptions {
   markdown: boolean;
   html: boolean;
+  /**
+   * For a sandboxed frame with scripts on: «live» ```html blocks are inserted as
+   * they are, <script>/<style> blocks are kept away from the Markdown pass, and
+   * nothing is sanitised (the frame has no access to the app).
+   */
+  live?: boolean;
+}
+
+const LIVE_HTML = /<script[\s>]|<!doctype html|<html[\s>]|<body[\s>]|<style[\s>]/i;
+const FENCE = /```([\w-]*)\n?([\s\S]*?)```/g;
+
+/** Is this fenced block a widget to run (```html with scripts or a whole page) rather than code to show? */
+function isLiveFence(lang: string, code: string): boolean {
+  return (!lang || lang.toLowerCase() === 'html') && LIVE_HTML.test(code);
+}
+
+/**
+ * Does the message carry a widget that needs JavaScript: a <script> in the
+ * message HTML (when HTML is on) or a ```html block with scripts or a whole page.
+ */
+export function hasLiveHtml(text: string, html: boolean): boolean {
+  let found = false;
+  const rest = text.replace(FENCE, (_, lang: string, code: string) => {
+    if (isLiveFence(lang, code)) found = true;
+    return '';
+  });
+  return found || (html && /<script[\s>]/i.test(rest));
 }
 
 export function formatMessage(text: string, opts: FormatOptions): string {
   if (!text) return '';
   const fences: string[] = [];
-  let src = text.replace(/```([\w-]*)\n?([\s\S]*?)```/g, (_, lang: string, code: string) => {
-    fences.push(`<pre class="cs-codeblock"${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>`);
-    return `\n\n\u0000F${fences.length - 1}\u0000\n\n`;
-  });
+  const keep = (html: string, block = true) => {
+    fences.push(html);
+    const mark = `\u0000F${fences.length - 1}\u0000`;
+    return block ? `\n\n${mark}\n\n` : mark;
+  };
+  let src = text.replace(FENCE, (_, lang: string, code: string) =>
+    opts.live && isLiveFence(lang, code) ? keep(code) : keep(`<pre class="cs-codeblock"${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}><code>${escapeHtml(code.replace(/\n$/, ''))}</code></pre>`),
+  );
   if (!opts.html) src = escapeHtml(src);
+  else if (opts.live) src = src.replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, (block) => keep(block, false));
   let html: string;
   if (opts.markdown) {
     html = src
@@ -102,7 +134,7 @@ export function formatMessage(text: string, opts: FormatOptions): string {
     html = src.replace(/\n/g, '<br>');
   }
   html = html.replace(/\u0000F(\d+)\u0000/g, (_, i) => fences[Number(i)]);
-  return sanitize(html);
+  return opts.live ? html : sanitize(html);
 }
 
 /** Plain text preview (for lists, notifications, TTS). */
@@ -114,7 +146,7 @@ export function stripMarkup(text: string): string {
     .trim();
 }
 
-/** Text inside quotes only — for «читать только реплики» in TTS. */
+/** Text inside quotes only — for «only direct speech» in TTS. */
 export function quotesOnly(text: string): string {
   const m = text.match(/«[^»]+»|“[^”]+”|"[^"]+"/g);
   return m ? m.map((q) => q.slice(1, -1)).join(' ') : '';

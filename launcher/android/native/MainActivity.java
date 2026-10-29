@@ -30,6 +30,13 @@ import java.nio.charset.StandardCharsets;
  */
 public class MainActivity extends BridgeActivity {
 
+    /** Language of the toasts below: the launcher and the interface set it ("en" or "ru"). */
+    private volatile boolean russian = false;
+
+    private String tr(String en, String ru) {
+        return russian ? ru : en;
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,6 +44,11 @@ public class MainActivity extends BridgeActivity {
     }
 
     private class FilesBridge {
+
+        @JavascriptInterface
+        public void setLanguage(String lang) {
+            russian = "ru".equals(lang);
+        }
 
         /** Saves base64 data under the given file name. Returns where it went, or "error:<reason>". */
         @JavascriptInterface
@@ -75,7 +87,7 @@ public class MainActivity extends BridgeActivity {
                 File file = new File(path).getCanonicalFile();
                 File appDir = getFilesDir().getParentFile().getCanonicalFile();
                 if (!file.getPath().startsWith(appDir.getPath() + File.separator)) {
-                    throw new IOException("файл вне данных приложения");
+                    throw new IOException(tr("the file is outside the app data", "файл вне данных приложения"));
                 }
                 try (InputStream in = new FileInputStream(file)) {
                     return save(name, mime, in);
@@ -98,29 +110,29 @@ public class MainActivity extends BridgeActivity {
             values.put(MediaStore.Downloads.MIME_TYPE, mime);
             values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Cream Soda");
             Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-            if (uri == null) throw new IOException("не удалось создать файл в Загрузках");
+            if (uri == null) throw new IOException(tr("could not create the file in Downloads", "не удалось создать файл в Загрузках"));
             try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-                if (out == null) throw new IOException("не удалось открыть файл для записи");
+                if (out == null) throw new IOException(tr("could not open the file for writing", "не удалось открыть файл для записи"));
                 copy(in, out);
             }
-            shown = "Загрузки/Cream Soda/" + name;
+            shown = tr("Downloads", "Загрузки") + "/Cream Soda/" + name;
         } else {
             // Before Android 10 public Downloads needs a storage permission; use the app's own folder.
             File dir = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "Cream Soda");
-            if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("нет доступа к памяти");
+            if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException(tr("no access to storage", "нет доступа к памяти"));
             File file = new File(dir, name);
             try (OutputStream out = new FileOutputStream(file)) {
                 copy(in, out);
             }
             shown = file.getPath();
         }
-        showToast("Сохранено: " + shown);
+        showToast(tr("Saved: ", "Сохранено: ") + shown);
         return shown;
     }
 
     private String fail(Exception e) {
         String reason = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-        showToast("Не удалось сохранить: " + reason);
+        showToast(tr("Could not save: ", "Не удалось сохранить: ") + reason);
         return "error:" + reason;
     }
 

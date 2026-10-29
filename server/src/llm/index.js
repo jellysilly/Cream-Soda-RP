@@ -21,14 +21,14 @@ export const API_TYPES = Object.keys(ADAPTERS);
 export function adapterFor(api) {
   const a = ADAPTERS[api];
   if (!a) {
-    const e = new Error(`Неизвестный тип API: ${api}`);
+    const e = new Error(`Unknown API type: ${api}`);
     e.status = 400;
     throw e;
   }
   return a;
 }
 
-/** Ring buffer of recent requests, shown in Settings → «Журнал запросов». */
+/** Ring buffer of recent requests, shown in Settings → «Request log». */
 export class RequestLog {
   constructor(limit = 150) {
     this.limit = limit;
@@ -71,7 +71,7 @@ function parseExtraBody(conn) {
   try {
     return JSON.parse(raw);
   } catch {
-    const e = new Error('Поле «Добавить в тело запроса» содержит некорректный JSON');
+    const e = new Error('The “Add to the request body” field contains invalid JSON');
     e.status = 400;
     throw e;
   }
@@ -82,8 +82,8 @@ function redact(body) {
   const walk = (node) => {
     if (!node || typeof node !== 'object') return;
     for (const [k, v] of Object.entries(node)) {
-      if (k === 'data' && typeof v === 'string' && v.length > 200) node[k] = `[base64 · ${v.length} симв.]`;
-      else if (k === 'url' && typeof v === 'string' && v.startsWith('data:') && v.length > 200) node[k] = `[data-url · ${v.length} симв.]`;
+      if (k === 'data' && typeof v === 'string' && v.length > 200) node[k] = `[base64 · ${v.length} chars]`;
+      else if (k === 'url' && typeof v === 'string' && v.startsWith('data:') && v.length > 200) node[k] = `[data-url · ${v.length} chars]`;
       else walk(v);
     }
   };
@@ -108,7 +108,7 @@ export async function handleGenerate({ conn, key, body, res, signal, log }) {
   };
   if (conn.api === 'anthropic' || conn.api === 'google') req.mode = 'chat';
   if (!req.model && !conn.model && !['textcompletion'].includes(conn.api)) {
-    const e = new Error('В профиле подключения не выбрана модель');
+    const e = new Error('No model is selected in the connection profile');
     e.status = 400;
     throw e;
   }
@@ -116,7 +116,7 @@ export async function handleGenerate({ conn, key, body, res, signal, log }) {
   const built = adapter.buildRequest(conn, key, req);
   const headers = { ...built.headers, ...extraHeaders(conn) };
   const entry = log.start({
-    label: body.label || 'Запрос',
+    label: body.label || 'Request',
     api: conn.api,
     model: req.model || conn.model || '',
     profile: conn.name,

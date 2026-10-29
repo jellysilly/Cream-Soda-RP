@@ -1,7 +1,7 @@
 {
   "name": "cream-soda-android",
   "version": "1.4.2",
-  "description": "Лаунчер Cream Soda для Android: сервер на телефоне (Capacitor + Node.js for Mobile Apps)",
+  "description": "Cream Soda launcher for Android: the server on the phone (Capacitor + Node.js for Mobile Apps)",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-or-later",

@@ -9,6 +9,7 @@ import { LorebooksTab } from './LorebooksTab';
 import { PlotsTab } from './PlotsTab';
 import { importCharactersInteractive, importCharacterFromUrl } from '../../lib/appActions';
 import { promptDialog } from '../../components/ui';
+import { t } from '../../lib/i18n';
 
 type Tab = 'chars' | 'personas' | 'lorebooks' | 'plots';
 
@@ -28,39 +29,39 @@ export default function LibraryPage() {
 
   return (
     <div className="cs-page">
-      <PageHead title="Библиотека" kana="ライブラリ">
+      <PageHead title={t('Library')} kana="ライブラリ">
         <Tabs<Tab>
-          label="Тип"
+          label={t('Type')}
           value={tab}
-          onChange={(t) => {
-            setTab(t);
-            navigate('library', t === 'chars' ? '' : t);
+          onChange={(next) => {
+            setTab(next);
+            navigate('library', next === 'chars' ? '' : next);
           }}
           items={[
-            { id: 'chars', label: `Персонажи · ${counts.c}` },
-            { id: 'personas', label: `Персоны · ${counts.p}` },
-            { id: 'lorebooks', label: `Лорбуки · ${counts.l}` },
-            { id: 'plots', label: `Сюжеты · ${counts.s}` },
+            { id: 'chars', label: t('Characters · {c}', { c: counts.c }) },
+            { id: 'personas', label: t('Personas · {p}', { p: counts.p }) },
+            { id: 'lorebooks', label: t('Lorebooks · {l}', { l: counts.l }) },
+            { id: 'plots', label: t('Plots · {s}', { s: counts.s }) },
           ]}
         />
         <label className="cs-search" style={{ flex: '1 1 200px' }}>
           <Icon name="search" size={18} stroke={2} />
-          <span className="cs-sr-only">Поиск</span>
-          <input type="search" placeholder={tab === 'lorebooks' ? 'Название, ключ или текст записи' : 'Имя, тег или автор'} value={query} onChange={(e) => setQuery(e.target.value)} />
+          <span className="cs-sr-only">{t('Search')}</span>
+          <input type="search" placeholder={tab === 'lorebooks' ? t('Title, key or entry text') : t('Name, tag or creator')} value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
         <div className="cs-row">
           {tab === 'chars' ? (
             <>
               <button type="button" className="cs-btn" onClick={() => importCharactersInteractive()}>
-                Импорт PNG / JSON
+                {t('Import PNG / JSON')}
               </button>
               <button
                 type="button"
                 className="cs-icon-btn"
-                title="Импорт по ссылке (Chub, прямая ссылка)"
-                aria-label="Импорт по ссылке"
+                title={t('Import from a link (Chub, direct link)')}
+                aria-label={t('Import from a link')}
                 onClick={async () => {
-                  const url = await promptDialog('Импорт по ссылке', { label: 'Ссылка на карточку (chub.ai или прямой PNG/JSON)' });
+                  const url = await promptDialog(t('Import from a link'), { label: t('Link to a card (chub.ai or a direct PNG/JSON)') });
                   if (url) importCharacterFromUrl(url);
                 }}
               >
@@ -70,7 +71,7 @@ export default function LibraryPage() {
           ) : null}
           <button type="button" className="cs-btn cs-btn--primary" onClick={() => navigate('generator', tab === 'personas' ? 'persona' : tab === 'lorebooks' ? 'lore' : tab === 'plots' ? 'plot' : 'char')}>
             <Icon name="sparkle" size={16} />
-            Сгенерировать
+            {t('Generate')}
           </button>
         </div>
       </PageHead>

@@ -45,7 +45,6 @@ let engine = 'active'; // active | done | error
 let server = { stage: 'booting' };
 let opening = false;
 let watchdog = null;
-let helloTimer = null;
 
 function toast(text, ms = 4000) {
   const el = $('toast');
@@ -122,15 +121,19 @@ function startServer() {
   render();
   expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
   sendToNode('start', { port: 8000 }).catch((err) => fail(err.message || String(err)));
+  watchStatus();
 }
 
 function onStatus(s) {
-  clearTimeout(watchdog);
-  clearInterval(helloTimer);
+  if (!s) return;
   const was = server.stage;
+  // A late «idle» (the answer to a «hello» sent before «start») changes nothing.
+  if (s.stage === 'idle' && was === 'starting') return;
+  // A repeated «starting» keeps the start timeout running; anything else answers it.
+  if (!(s.stage === 'starting' && was === 'starting')) clearTimeout(watchdog);
   server = s;
   if (s.stage === 'idle') startServer();
-  else if (s.stage === 'starting') expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
+  else if (s.stage === 'starting' && was !== 'starting') expectStatus(START_TIMEOUT, `Сервер не запустился за минуту. ${RESTART_HINT}`);
   render();
   if (server.stage === 'ready' && was !== 'ready') {
     if (prefs.background) applyBackground(true);
@@ -138,9 +141,38 @@ function onStatus(s) {
   }
 }
 
+// Capacitor drops every plugin listener when the WebView reports «page started»
+// (Bridge.reset), and on some phones that report comes after this script has
+// subscribed, so a long-lived «status» subscription can silently vanish. Until
+// the server is up, ask for the status every second over a fresh subscription.
+let statusHandle = null;
+async function listenStatus() {
+  const old = statusHandle;
+  statusHandle = await onNode('status', onStatus);
+  await old?.remove().catch(() => {});
+}
+
+const settled = () => server.stage === 'ready' || server.stage === 'error';
+let watching = false;
+async function watchStatus() {
+  if (watching) return;
+  watching = true;
+  try {
+    while (!settled()) {
+      onStatus(await askNode('hello', 'status', undefined, 2000).catch(() => null));
+      if (!settled()) await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  } finally {
+    watching = false;
+  }
+  // For news that come unasked later (Node.js stopping), subscribe once more now that the page has settled.
+  listenStatus().catch(() => {});
+}
+
 async function boot() {
   render();
-  onNode('status', onStatus);
+  if (document.readyState !== 'complete') await new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
+  await listenStatus();
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error('timeout')), ENGINE_TIMEOUT);
@@ -156,12 +188,8 @@ async function boot() {
   engine = 'done';
   render();
   // Silence after «hello» means the Node.js script itself failed to load.
-  // Ask a few times in case one message got lost on the way.
   expectStatus(REPLY_TIMEOUT, `Node.js запущен, но не отвечает. ${RESTART_HINT}`);
-  const hello = () => sendToNode('hello').catch((err) => fail(err.message || String(err), true));
-  hello();
-  helloTimer = setInterval(hello, 3000);
-  setTimeout(() => clearInterval(helloTimer), REPLY_TIMEOUT);
+  watchStatus();
 }
 
 // ───────── Controls ─────────

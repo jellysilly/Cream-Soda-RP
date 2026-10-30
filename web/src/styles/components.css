@@ -109,6 +109,70 @@
   color: var(--cs-card-label);
 }
 
+/* ───────── Saved keys ───────── */
+.cs-key-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: var(--cs-card);
+  border: 1.5px solid transparent;
+}
+
+.cs-key-row[aria-current='true'] {
+  border-color: var(--cs-accent);
+}
+
+.cs-key-row__pick {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid var(--cs-border);
+  border-radius: 50%;
+  background: var(--cs-surface);
+  cursor: pointer;
+}
+
+.cs-key-row__pick span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.cs-key-row__pick[aria-checked='true'] {
+  border-color: var(--cs-accent);
+}
+
+.cs-key-row__pick[aria-checked='true'] span {
+  background: var(--cs-accent);
+}
+
+.cs-key-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.cs-key-row__main .cs-input {
+  flex: 1 1 140px;
+  min-width: 0;
+  min-height: 36px;
+  background: var(--cs-surface);
+}
+
+.cs-key-row__value {
+  font: 600 12px var(--cs-font-mono);
+  color: var(--cs-card-label);
+  overflow-wrap: anywhere;
+}
+
 /* ───────── Prompt editor ───────── */
 .cs-prompt-editor__label {
   display: inline-flex;
@@ -1235,6 +1299,11 @@ textarea.cs-code {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
+}
+
+/* Long values (model names) get a row of their own. */
+.cs-grid-fields .cs-field--wide {
+  grid-column: 1 / -1;
 }
 
 .cs-grid-fields--sm {

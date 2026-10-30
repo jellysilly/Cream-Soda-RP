@@ -7,6 +7,7 @@ import { newConnection } from '../../lib/defaults';
 import type { ApiType, ConnectionProfile, ModelInfo, RequestLogItem, Settings } from '../../lib/types';
 import { fmtTime, fmtNum } from '../../lib/utils';
 import { t } from '../../lib/i18n';
+import { KeysButton } from '../../components/KeysDialog';
 
 const API_TYPES: { id: ApiType; label: string }[] = [
   { id: 'openai', label: t('OpenAI-compatible') },
@@ -334,6 +335,7 @@ export function ConnectionsTab() {
               >
                 <Icon name={revealed ? 'eyeOff' : 'eye'} size={18} />
               </button>
+              <KeysButton slot={secretName} title={c.name} />
             </div>
           </Field>
         </div>

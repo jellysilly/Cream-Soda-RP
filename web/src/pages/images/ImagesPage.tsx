@@ -7,6 +7,7 @@ import { buildImagePrompt, generateImages, insertImageMessage, type ImageSource 
 import type { ImageSettings } from '../../lib/types';
 import { uid } from '../../lib/utils';
 import { PromptEditor } from '../../components/PromptEditor';
+import { KeysButton } from '../../components/KeysDialog';
 import { t } from '../../lib/i18n';
 
 function hostOf(url: string) {
@@ -44,7 +45,16 @@ export default function ImagesPage() {
   const [gallery, setGallery] = useState<{ url: string; name: string }[]>([]);
   const [selected, setSelected] = useState('');
   const [building, setBuilding] = useState(false);
+  const [models, setModels] = useState<{ id: string; name: string }[]>([]);
+  const [samplers, setSamplers] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
   const dir = chatId || 'gallery';
+
+  // A list from another API would only mislead.
+  useEffect(() => {
+    setModels([]);
+    setSamplers([]);
+  }, [cfg.format, cfg.endpoint]);
 
   const set = (p: Partial<ImageSettings>) => updateImageSettings(p);
 
@@ -77,6 +87,23 @@ export default function ImagesPage() {
     const r = await api.setSecret('imagegen', key);
     setState((s) => ({ secrets: { ...s.secrets, imagegen: r.masked } }));
     setKey('');
+  };
+
+  const refreshModels = async () => {
+    setLoadingModels(true);
+    try {
+      if (key) await saveKey();
+      // The settings are saved with a delay: send the ones on screen.
+      const r = await api.imageModels(cfg);
+      setModels(r.models);
+      setSamplers(r.samplers);
+      if (!cfg.model && r.models[0] && cfg.format === 'openai') set({ model: r.models[0].id });
+      toast(t('Models: {n}', { n: r.models.length }));
+    } catch (err) {
+      toastError(err, t('Model list'));
+    } finally {
+      setLoadingModels(false);
+    }
   };
 
   const assemble = async () => {
@@ -143,13 +170,14 @@ export default function ImagesPage() {
             />
           </Field>
           <Field label={t('Key / header')} hint={t('A Bearer key or a line like “X-Api-Key: …”. Stored encrypted.')}>
-            <div className="cs-row">
+            <div className="cs-row" style={{ gap: 6 }}>
               <input className="cs-input cs-input--mono cs-grow" type="password" value={key} placeholder={secretSet ? t('saved · enter a new one') : t('not set')} onChange={(e) => setKey(e.target.value)} />
               {key ? (
                 <button type="button" className="cs-btn cs-btn--sm" onClick={() => saveKey().then(() => toast(t('Key saved')))}>
                   OK
                 </button>
               ) : null}
+              <KeysButton slot="imagegen" title={t('Images')} />
             </div>
           </Field>
           {cfg.format === 'custom' ? (
@@ -178,8 +206,25 @@ export default function ImagesPage() {
           ) : null}
           {cfg.format !== 'custom' ? (
             <div className="cs-grid-fields">
-              <Field label={t('Model')}>
-                <input className="cs-input" value={cfg.model} placeholder={cfg.format === 'openai' ? 'gpt-image-1' : t('default')} onChange={(e) => set({ model: e.target.value })} />
+              <Field label={t('Model')} className="cs-field--wide">
+                <div className="cs-row" style={{ gap: 6 }}>
+                  {models.length ? (
+                    <select className="cs-select cs-grow" value={cfg.model} onChange={(e) => set({ model: e.target.value })}>
+                      <option value="">{cfg.format === 'openai' ? 'gpt-image-1' : t('default')}</option>
+                      {cfg.model && !models.some((m) => m.id === cfg.model) ? <option value={cfg.model}>{cfg.model}</option> : null}
+                      {models.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name && m.name !== m.id ? `${m.name} · ${m.id}` : m.id}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input className="cs-input cs-grow" value={cfg.model} placeholder={cfg.format === 'openai' ? 'gpt-image-1' : t('default')} onChange={(e) => set({ model: e.target.value })} />
+                  )}
+                  <button type="button" className="cs-icon-btn cs-icon-btn--soft" style={{ width: 44, height: 44, flex: 'none' }} aria-label={t('Refresh the list')} title={t('Load the models from the API')} disabled={loadingModels || !cfg.endpoint} onClick={refreshModels}>
+                    {loadingModels ? <span className="cs-spinner" style={{ width: 16, height: 16 }} /> : <Icon name="refresh" size={16} stroke={2} />}
+                  </button>
+                </div>
               </Field>
               {cfg.format !== 'openai' ? (
                 <Field label="CFG">
@@ -188,7 +233,18 @@ export default function ImagesPage() {
               ) : null}
               {cfg.format === 'a1111' ? (
                 <Field label={t('Sampler')}>
-                  <input className="cs-input" value={cfg.sampler} onChange={(e) => set({ sampler: e.target.value })} />
+                  {samplers.length ? (
+                    <select className="cs-select" value={cfg.sampler} onChange={(e) => set({ sampler: e.target.value })}>
+                      {cfg.sampler && !samplers.includes(cfg.sampler) ? <option value={cfg.sampler}>{cfg.sampler}</option> : null}
+                      {samplers.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input className="cs-input" value={cfg.sampler} onChange={(e) => set({ sampler: e.target.value })} />
+                  )}
                 </Field>
               ) : null}
             </div>

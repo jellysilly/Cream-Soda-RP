@@ -187,6 +187,60 @@ export async function generateImages(cfg, key, params, opts = {}) {
   return results.slice(0, count);
 }
 
+const IMAGE_MODEL = /image|dall-?e|flux|stable|sdxl|sd-?[123]|imagen|recraft|ideogram|playground|kandinsky|midjourney|seedream|hidream|qwen-image|aura/i;
+
+/**
+ * Models (and samplers, where the API has them) the generator can use:
+ *   a1111   checkpoints from /sdapi/v1/sd-models, samplers from /sdapi/v1/samplers
+ *   comfy   checkpoints and diffusion models from /object_info
+ *   openai  /models, image models first (all of them if none looks like one)
+ */
+const badRequest = (message) => Object.assign(new Error(message), { status: 400 });
+
+export async function listImageModels(cfg, key) {
+  const headers = authHeaders(key);
+  const endpoint = String(cfg.endpoint || '').trim();
+  if (!endpoint) throw badRequest('The image generator endpoint is not set');
+  const opts = { headers, timeoutMs: 30000, proxy: cfg.proxy };
+  const getJson = async (url) => {
+    const res = await upstreamFetch(url, opts);
+    if (!res.ok) throw await readErrorBody(res);
+    return res.json();
+  };
+  switch (cfg.format) {
+    case 'a1111': {
+      const base = endpoint.replace(/\/sdapi\/v1\/txt2img\/?$/, '');
+      const [models, samplers] = await Promise.all([getJson(joinUrl(base, 'sdapi/v1/sd-models')), getJson(joinUrl(base, 'sdapi/v1/samplers')).catch(() => [])]);
+      return {
+        models: (Array.isArray(models) ? models : []).map((m) => ({ id: m.title || m.model_name, name: m.model_name || m.title })).filter((m) => m.id),
+        samplers: (Array.isArray(samplers) ? samplers : []).map((x) => x.name).filter(Boolean),
+      };
+    }
+    case 'comfy': {
+      const base = endpoint.replace(/\/prompt\/?$/, '');
+      const info = await getJson(joinUrl(base, 'object_info'));
+      const options = (node, input) => {
+        const spec = info?.[node]?.input?.required?.[input];
+        // Old ComfyUI: [[…names]]; newer: ['COMBO', { options: […] }].
+        const list = Array.isArray(spec?.[0]) ? spec[0] : spec?.[1]?.options;
+        return Array.isArray(list) ? list.map(String) : [];
+      };
+      const names = [...new Set([...options('CheckpointLoaderSimple', 'ckpt_name'), ...options('UNETLoader', 'unet_name')])];
+      // The sampler lives in the workflow itself, so only models are offered.
+      return { models: names.map((id) => ({ id, name: id })), samplers: [] };
+    }
+    case 'openai': {
+      const base = endpoint.replace(/\/images\/generations\/?$/, '');
+      const json = await getJson(joinUrl(base, 'models'));
+      const all = (Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []).map((m) => ({ id: String(m.id || m.name || ''), name: String(m.name || m.id || '') })).filter((m) => m.id);
+      const images = all.filter((m) => IMAGE_MODEL.test(m.id) || IMAGE_MODEL.test(m.name));
+      return { models: images.length ? images : all, samplers: [] };
+    }
+    default:
+      throw badRequest('A custom JSON template has no model list: type the model name into the template');
+  }
+}
+
 export async function testImageApi(cfg, key) {
   const started = Date.now();
   const headers = authHeaders(key);

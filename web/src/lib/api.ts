@@ -52,6 +52,14 @@ export interface Bootstrap {
   extensions: ExtensionInfo[];
 }
 
+/** Saved keys of one slot (`conn:<id>`, `imagegen`); `masked` is the active one. */
+export interface KeyList {
+  active: string;
+  rotate: boolean;
+  keys: { id: string; label: string; masked: string }[];
+  masked: string;
+}
+
 export const api = {
   bootstrap: () => request<Bootstrap>('GET', 'api/bootstrap'),
 
@@ -90,6 +98,13 @@ export const api = {
   secrets: () => request<Record<string, string>>('GET', 'api/secrets'),
   setSecret: (name: string, value: string) => request<{ masked: string }>('PUT', `api/secrets/${encodeURIComponent(name)}`, { value }),
   revealSecret: (name: string) => request<{ value: string }>('POST', `api/secrets/${encodeURIComponent(name)}/reveal`, {}),
+  keyList: (name: string) => request<KeyList>('GET', `api/secrets/${encodeURIComponent(name)}/keys`),
+  addKeys: (name: string, value: string, label = '') => request<KeyList & { added: number }>('POST', `api/secrets/${encodeURIComponent(name)}/keys`, { value, label }),
+  updateKey: (name: string, id: string, patch: { label?: string; active?: boolean }) =>
+    request<KeyList>('PATCH', `api/secrets/${encodeURIComponent(name)}/keys/${encodeURIComponent(id)}`, patch),
+  removeKey: (name: string, id: string) => request<KeyList>('DELETE', `api/secrets/${encodeURIComponent(name)}/keys/${encodeURIComponent(id)}`),
+  revealKey: (name: string, id: string) => request<{ value: string }>('POST', `api/secrets/${encodeURIComponent(name)}/keys/${encodeURIComponent(id)}/reveal`, {}),
+  setKeyRotation: (name: string, rotate: boolean) => request<KeyList>('PUT', `api/secrets/${encodeURIComponent(name)}/rotate`, { rotate }),
 
   models: (conn: Partial<ConnectionProfile> & { id?: string }, key?: string) =>
     request<ModelInfo[]>('POST', 'api/llm/models', { connection: conn, key }),
@@ -101,6 +116,7 @@ export const api = {
   generateImages: (body: { params: Record<string, unknown>; dir?: string; label?: string; config?: unknown }, signal?: AbortSignal) =>
     request<{ images: { url: string }[] }>('POST', 'api/images/generate', body, { signal }),
   testImages: (config?: unknown) => request<{ ok: boolean; latency: number; error?: string }>('POST', 'api/images/test', { config }),
+  imageModels: (config?: unknown) => request<{ models: { id: string; name: string }[]; samplers: string[] }>('POST', 'api/images/models', { config }),
 
   extensions: () => request<ExtensionInfo[]>('GET', 'api/extensions'),
   installExtension: (url: string) => request<ExtensionInfo>('POST', 'api/extensions/install', { url }),

@@ -5,7 +5,8 @@
  * Then add an «OpenAI-compatible» connection with base URL http://127.0.0.1:5055/v1
  * and any model name. It streams canned roleplay replies, echoes the last user line,
  * and answers the prompts Cream Soda sends (summary, facts, variants, translation,
- * image prompts, generator JSON) in the expected shape.
+ * image prompts, generator JSON) in the expected shape. The same port also plays an
+ * Automatic1111 image API (Images → A1111 with endpoint http://127.0.0.1:5055).
  */
 import http from 'node:http';
 
@@ -61,10 +62,22 @@ function send(res, status, obj) {
   res.end(JSON.stringify(obj));
 }
 
+// A 1×1 pink PNG for the A1111-style image endpoint.
+const PIXEL = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && /\/models$/.test(req.url)) {
     return send(res, 200, { data: [{ id: 'mock-soda-1', context_length: 32768 }, { id: 'mock-soda-mini', context_length: 8192 }] });
   }
+  // Enough of the Automatic1111 API to try the Images page: model list, samplers, txt2img.
+  if (req.method === 'GET' && req.url === '/sdapi/v1/sd-models') {
+    return send(res, 200, [
+      { title: 'soda-anime.safetensors [1a2b3c]', model_name: 'soda-anime' },
+      { title: 'soda-pastel-xl.safetensors [4d5e6f]', model_name: 'soda-pastel-xl' },
+    ]);
+  }
+  if (req.method === 'GET' && req.url === '/sdapi/v1/samplers') return send(res, 200, [{ name: 'Euler a' }, { name: 'DPM++ 2M Karras' }]);
+  if (req.method === 'POST' && req.url === '/sdapi/v1/txt2img') return send(res, 200, { images: [PIXEL] });
   if (req.method !== 'POST') return send(res, 404, { error: { message: 'not found' } });
   let raw = '';
   req.on('data', (d) => (raw += d));

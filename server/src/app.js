@@ -4,7 +4,7 @@ import express from 'express';
 import { Storage, COLLECTIONS, DOCS, UPLOAD_KINDS, httpError, isValidId } from './storage.js';
 import { Secrets, mask } from './secrets.js';
 import { handleGenerate, listModels, testConnection, RequestLog, upstreamFetch } from './llm/index.js';
-import { generateImages, testImageApi } from './imagegen.js';
+import { generateImages, testImageApi, listImageModels } from './imagegen.js';
 import { Extensions } from './extensions.js';
 import { createBackup, restoreBackup, saveBackupFile, listBackups, backupPath, runAutoBackup } from './backup.js';
 import { lanAddresses, loadLanToken, qrSvg } from './system.js';
@@ -221,28 +221,105 @@ export function createApp(ctx) {
     asyncRoute(async (req, res) => res.json({ value: await secrets.get(req.params.name) })),
   );
 
+  // Several keys per slot: pick the active one, add a batch, rotate on rate limits.
+  const keySlot = (req) => {
+    const name = req.params.name;
+    if (!/^[\w:\-.]{1,120}$/.test(name)) throw httpError(400, 'Invalid key name');
+    return name;
+  };
+  const keyListReply = async (name) => ({ ...(await secrets.publicList(name)), masked: mask(await secrets.get(name)) });
+  app.get(
+    '/api/secrets/:name/keys',
+    asyncRoute(async (req, res) => res.json(await keyListReply(keySlot(req)))),
+  );
+  app.post(
+    '/api/secrets/:name/keys',
+    json,
+    asyncRoute(async (req, res) => {
+      const name = keySlot(req);
+      const values = Array.isArray(req.body?.values) ? req.body.values : String(req.body?.value || '').split(/\r?\n/);
+      const added = await secrets.addKeys(name, values.slice(0, 500), String(req.body?.label || '').slice(0, 80));
+      res.json({ added, ...(await keyListReply(name)) });
+    }),
+  );
+  app.patch(
+    '/api/secrets/:name/keys/:id',
+    json,
+    asyncRoute(async (req, res) => {
+      const name = keySlot(req);
+      await secrets.updateKey(name, req.params.id, req.body || {});
+      res.json(await keyListReply(name));
+    }),
+  );
+  app.delete(
+    '/api/secrets/:name/keys/:id',
+    asyncRoute(async (req, res) => {
+      const name = keySlot(req);
+      await secrets.removeKey(name, req.params.id);
+      res.json(await keyListReply(name));
+    }),
+  );
+  app.post(
+    '/api/secrets/:name/keys/:id/reveal',
+    localOnly,
+    asyncRoute(async (req, res) => res.json({ value: await secrets.revealKey(keySlot(req), req.params.id) })),
+  );
+  app.put(
+    '/api/secrets/:name/rotate',
+    json,
+    asyncRoute(async (req, res) => {
+      const name = keySlot(req);
+      await secrets.setRotate(name, !!req.body?.rotate);
+      res.json(await keyListReply(name));
+    }),
+  );
+
+  // Rate limit, quota or a revoked key: with rotation on, the request is repeated with the next key.
+  const ROTATE_ON = new Set([401, 402, 403, 429]);
+  async function withKeyRotation(slot, key, run, canRetry = () => true) {
+    const failed = new Set();
+    let current = key;
+    for (;;) {
+      try {
+        return await run(current);
+      } catch (err) {
+        if (!slot || !ROTATE_ON.has(err.status) || !canRetry()) throw err;
+        failed.add(current);
+        const next = await secrets.rotate(slot, failed);
+        if (!next) throw err;
+        console.log(`[keys] ${slot}: HTTP ${err.status}, switching to the key ${next.label ? `"${next.label}"` : mask(next.value)}`);
+        current = next.value;
+      }
+    }
+  }
+
   // ───────── LLM ─────────
   async function resolveConnection(body) {
     let conn = body.connection;
     if (!conn && body.connectionId) conn = await storage.get('connections', String(body.connectionId));
     if (!conn) throw httpError(400, 'No connection profile selected. Open Settings → Connections.');
-    let key = '';
-    if (typeof body.key === 'string' && body.key) key = body.key;
-    else if (conn.id) key = await secrets.get(`conn:${conn.id}`);
-    return { conn, key };
+    // A key typed into the form (not saved yet) is used as is; saved keys can rotate.
+    if (typeof body.key === 'string' && body.key) return { conn, key: body.key, slot: '' };
+    const slot = conn.id ? `conn:${conn.id}` : '';
+    return { conn, key: slot ? await secrets.get(slot) : '', slot };
   }
 
   app.post(
     '/api/llm/generate',
     json,
     asyncRoute(async (req, res) => {
-      const { conn, key } = await resolveConnection(req.body);
+      const { conn, key, slot } = await resolveConnection(req.body);
       const controller = new AbortController();
       res.on('close', () => {
         if (!res.writableEnded) controller.abort();
       });
       try {
-        await handleGenerate({ conn, key, body: req.body, res, signal: controller.signal, log: requestLog });
+        await withKeyRotation(
+          slot,
+          key,
+          (k) => handleGenerate({ conn, key: k, body: req.body, res, signal: controller.signal, log: requestLog }),
+          () => !res.headersSent && !controller.signal.aborted,
+        );
       } catch (err) {
         if (res.headersSent) {
           res.write(`data: ${JSON.stringify({ t: 'error', message: err.message, status: err.status || 500 })}\n\n`);
@@ -288,7 +365,12 @@ export function createApp(ctx) {
       const started = Date.now();
       const entry = requestLog.start({ label: req.body?.label || 'Image', api: `images:${cfg.format || 'custom'}`, model: cfg.model || '', url: cfg.endpoint, request: req.body?.params });
       try {
-        const images = await generateImages(cfg, key, req.body?.params || {}, { signal: controller.signal });
+        const images = await withKeyRotation(
+          'imagegen',
+          key,
+          (k) => generateImages(cfg, k, req.body?.params || {}, { signal: controller.signal }),
+          () => !controller.signal.aborted,
+        );
         const dir = isValidId(String(req.body?.dir || '')) ? String(req.body.dir) : 'gallery';
         const saved = [];
         for (const img of images) {
@@ -305,6 +387,14 @@ export function createApp(ctx) {
         entry.duration = Date.now() - started;
         throw err;
       }
+    }),
+  );
+  app.post(
+    '/api/images/models',
+    json,
+    asyncRoute(async (req, res) => {
+      const cfg = { ...(await storage.getDoc('imagegen')), ...(req.body?.config || {}) };
+      res.json(await listImageModels(cfg, await secrets.get('imagegen')));
     }),
   );
   app.post(
